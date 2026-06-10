@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tesseract 4D // DartStream Puzzle Game</title>
+  <!-- Google Fonts: Inter and JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="game-wrapper">
+    <!-- Header -->
+    <header class="game-header">
+      <div class="brand">
+        <span class="pulse-dot active" id="server-indicator"></span>
+        <h1>TESSERACT 4D</h1>
+        <span class="badge">DARTSTREAM ENGINE</span>
+      </div>
+      <div class="game-meta-badges">
+        <div class="stat-badge">
+          <span class="label">LEVEL</span>
+          <span class="value text-cyan" id="level-display">1</span>
+        </div>
+        <div class="stat-badge">
+          <span class="label">ROTATIONS</span>
+          <span class="value text-purple" id="rotations-display">0</span>
+        </div>
+        <div class="stat-badge">
+          <span class="label">TIME ELAPSED</span>
+          <span class="value text-indigo" id="timer-display">00:00</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Game Grid -->
+    <main class="game-grid">
+      
+      <!-- Left Panel: Main 4D Projection Canvas & Rotational Controls -->
+      <section class="grid-col left-col">
+        <div class="card glassmorphic canvas-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <span class="icon">✨</span>
+              <h2>4D Perspective Projection</h2>
+            </div>
+            <div class="alignment-score">
+              <span class="label">ALIGNMENT:</span>
+              <span class="value text-cyan" id="match-display">0%</span>
+            </div>
+          </div>
+          <div class="card-body game-canvas-container">
+            <canvas id="game-canvas" width="550" height="380"></canvas>
+            <div class="success-overlay" id="win-overlay">
+              <div class="overlay-content">
+                <h2>LOCK DECRYPTED!</h2>
+                <p>4D alignment matched successfully.</p>
+                <button class="btn btn-primary" id="next-level-btn">Next Level</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4D Rotational Controls (6 planes) -->
+        <div class="card glassmorphic controls-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <span class="icon">⚙️</span>
+              <h2>Dimensional Rotation Sliders</h2>
+            </div>
+            <button class="btn" id="reset-angles-btn">Reset Grid</button>
+          </div>
+          <div class="card-body">
+            <div class="sliders-grid">
+              
+              <!-- 3D rotations -->
+              <div class="slider-group">
+                <div class="slider-header">
+                  <span class="plane-label">XY PLANE <small>(3D Z-Axis)</small></span>
+                  <span class="plane-val" id="val-xy">0°</span>
+                </div>
+                <input type="range" class="rot-slider" id="slider-xy" min="-180" max="180" value="0">
+              </div>
+
+              <div class="slider-group">
+                <div class="slider-header">
+                  <span class="plane-label">XZ PLANE <small>(3D Y-Axis)</small></span>
+                  <span class="plane-val" id="val-xz">0°</span>
+                </div>
+                <input type="range" class="rot-slider" id="slider-xz" min="-180" max="180" value="0">
+              </div>
+
+              <div class="slider-group">
+                <div class="slider-header">
+                  <span class="plane-label">YZ PLANE <small>(3D X-Axis)</small></span>
+                  <span class="plane-val" id="val-yz">0°</span>
+                </div>
+                <input type="range" class="rot-slider" id="slider-yz" min="-180" max="180" value="0">
+              </div>
+
+              <!-- 4D rotations (along W-axis) -->
+              <div class="slider-group w-axis-control">
+                <div class="slider-header">
+                  <span class="plane-label">XW PLANE <small>(4D W-Axis)</small></span>
+                  <span class="plane-val" id="val-xw">0°</span>
+                </div>
+                <input type="range" class="rot-slider" id="slider-xw" min="-180" max="180" value="0">
+              </div>
+
+              <div class="slider-group w-axis-control">
+                <div class="slider-header">
+                  <span class="plane-label">YW PLANE <small>(4D W-Axis)</small></span>
+                  <span class="plane-val" id="val-yw">0°</span>
+                </div>
+                <input type="range" class="rot-slider" id="slider-yw" min="-180" max="180" value="0">
+              </div>
+
+              <div class="slider-group w-axis-control">
+                <div class="slider-header">
+                  <span class="plane-label">ZW PLANE <small>(4D W-Axis)</small></span>
+                  <span class="plane-val" id="val-zw">0°</span>
+                </div>
+                <input type="range" class="rot-slider" id="slider-zw" min="-180" max="180" value="0">
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Panel: Target reference, AI assistant and Server live stream logs -->
+      <section class="grid-col right-col">
+        
+        <!-- Target Reference Projection -->
+        <div class="card glassmorphic target-card" id="target-reference-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <span class="icon">🎯</span>
+              <h2>Target Dimension Blueprint</h2>
+            </div>
+            <span class="badge badge-purple">REFERENCE</span>
+          </div>
+          <div class="card-body target-canvas-container">
+            <canvas id="target-canvas" width="220" height="150"></canvas>
+            <p class="target-hint">Match this structure using the sliders on the left.</p>
+          </div>
+        </div>
+
+        <!-- AI Assistant Game Master -->
+        <div class="card glassmorphic chat-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <span class="icon">🤖</span>
+              <h2>4D Game Master</h2>
+            </div>
+            <span class="badge badge-purple">AI Monitor</span>
+          </div>
+          <div class="card-body chat-body-container">
+            <div class="chat-messages" id="chat-messages-container">
+              <div class="chat-bubble assistant">
+                <div class="bubble-content">
+                  Greetings! I am the Tesseract Lock Monitor. Align the 4D hypercube projections using the sliders. Ask me "how to play" or click a quick-prompt chip below for guidance!
+                </div>
+                <span class="chat-time">Just now</span>
+              </div>
+            </div>
+            <div class="quick-prompts">
+              <button class="chip-prompt" data-msg="How to play this game?">How to play?</button>
+              <button class="chip-prompt" data-msg="What is a tesseract?">What is a tesseract?</button>
+              <button class="chip-prompt" data-msg="Give me a hint to align the cubes.">Give me a hint</button>
+            </div>
+            <form class="chat-input-form" id="chat-form">
+              <input type="text" id="chat-input" placeholder="Type a message or developer command..." required autocomplete="off">
+              <button type="submit" class="btn btn-send" id="chat-send-btn">Send</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Live Engine Stream Telemetries -->
+        <div class="card glassmorphic terminal-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <span class="icon">📡</span>
+              <h2>DartStream Live Log Broadcast</h2>
+            </div>
+            <span class="badge badge-outline" id="sse-status">ACTIVE</span>
+          </div>
+          <div class="card-body terminal-body">
+            <div class="terminal-header">Incoming event-stream (/api/stream)</div>
+            <div class="terminal-content" id="terminal-log">
+              <div class="log-line system-msg">Initializing event connection listener...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Game configurations (Feature flags) -->
+        <div class="card glassmorphic flags-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <span class="icon">🔧</span>
+              <h2>Dynamic Engine Settings</h2>
+            </div>
+            <span class="badge" id="flags-status">SYNCED</span>
+          </div>
+          <div class="card-body">
+            <div class="flags-list">
+              <label class="flag-item">
+                <div class="flag-info">
+                  <span class="flag-name">enableWaxisRotation</span>
+                  <span class="flag-desc">Unlocks 4D W-axis sliders (XW, YW, ZW)</span>
+                </div>
+                <input type="checkbox" id="flag-waxis" checked>
+                <span class="slider"></span>
+              </label>
+
+              <label class="flag-item">
+                <div class="flag-info">
+                  <span class="flag-name">showTargetReference</span>
+                  <span class="flag-desc">Renders the reference target blueprint</span>
+                </div>
+                <input type="checkbox" id="flag-reference" checked>
+                <span class="slider"></span>
+              </label>
+
+              <label class="flag-item">
+                <div class="flag-info">
+                  <span class="flag-name">hypercolorMode</span>
+                  <span class="flag-desc">Injects dynamic color hues into canvas lines</span>
+                </div>
+                <input type="checkbox" id="flag-hypercolor">
+                <span class="slider"></span>
+              </label>
+
+              <label class="flag-item">
+                <div class="flag-info">
+                  <span class="flag-name">hardcoreDifficulty</span>
+                  <span class="flag-desc">Shrinks match alignment tolerance to 2%</span>
+                </div>
+                <input type="checkbox" id="flag-difficulty">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+      </section>
+    </main>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

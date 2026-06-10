@@ -1,0 +1,23 @@
+name: tesseract
+description: A DartStream project
+version: 0.1.0
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  # DartStream core
+  ds_standard_features: ^0.1.6
+  ds_shelf: ^0.0.1-pre+4
+  ds_storage_base: ^0.0.1
+  
+  # Add your dependencies here
+
+dev_dependencies:
+  lints: ^4.0.0
+  test: ^1.25.0
+
+dependency_overrides:
+  ds_shelf:
+    path: ../../../ds_dartstream/packages/standard/standard_extensions/platform_services/middleware/providers/ds_shelf
+

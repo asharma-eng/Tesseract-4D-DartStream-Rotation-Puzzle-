@@ -1,0 +1,16 @@
+# Dart/Flutter build and tool directories
+.dart_tool/
+.packages
+.pub/
+build/
+
+# Local configuration overrides or IDE settings
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# OS files
+.DS_Store
+Thumbs.db
