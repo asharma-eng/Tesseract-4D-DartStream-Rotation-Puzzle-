@@ -1,6 +1,6 @@
 # Tesseract 4D // DartStream Rotation Puzzle Game
 
-A full-stack, real-time developer puzzle game built on top of the **DartStream** framework using the **Standard Engine** and **Shelf Middleware** extension layers.
+A full-stack, real-time developer puzzle game integrated with **DartStream SaaS** cloud services (authentication, platform feature-flags, reactive telemetry streams, and experience cloud-saves) built on top of the Standard Engine.
 
 ---
 
@@ -15,9 +15,10 @@ The application demonstrates real-time Server-Sent Events (SSE) broadcasting arc
 
 ## 🛠️ Key Features
 - **4D Perspective Projection**: Implements full 4D matrix rotation equations and renders perspective projection calculations directly on HTML5 Canvas.
-- **Reactive Telemetry Event Feed**: Uses DartStream core streams to pipe and broadcast live client events (rotations, highscores, level wins) over an active Server-Sent Events (SSE) feed (`/api/stream`).
+- **SaaS Telemetry Streaming**: Logs real-time game activity to the **DartStream SaaS Event Engine (`ds-reactive`)** and broadcasts active stream feedback to the client over SSE.
+- **SaaS Cloud Save**: Persists player decryption highscores dynamically using **DartStream Cloud Save (`ds-experience`)** snapshots.
+- **SaaS Feature Flags**: Dynamically synchronizes puzzle settings (difficulty, W-axis rotation, reference blueprints) directly from your **DartStream Platform (`ds-platform`)** configurations.
 - **Scripted Game Master Chat**: Connects to an automated assistant route (`/api/chat`) that answers questions about 4D coordinate geometries and provides clues.
-- **Dynamic Configuration Flags**: Supports synchronizing dynamic settings (W-axis slider toggles, reference blueprints, hypercolor modes, and alignment difficulty) in memory.
 - **Cyberpunk Dark Theme**: Modern glassmorphic console style utilizing Google Fonts (Inter, JetBrains Mono) and CSS gradients.
 
 ---
@@ -65,6 +66,17 @@ Ensure you have the Dart SDK installed. Run the following command in the project
 ```bash
 dart pub get
 ```
+
+### 3. Configure SaaS Environment Token
+Set your account's Personal Token in your terminal:
+- **PowerShell (Windows)**:
+  ```powershell
+  $env:DARTSTREAM_TOKEN="secret_772f7b48ba92489c9d3c7c291dea1eb4"
+  ```
+- **Bash (Linux/Mac)**:
+  ```bash
+  export DARTSTREAM_TOKEN="secret_772f7b48ba92489c9d3c7c291dea1eb4"
+  ```
 
 ### 2. Run the Application
 Start the Tesseract server locally:
