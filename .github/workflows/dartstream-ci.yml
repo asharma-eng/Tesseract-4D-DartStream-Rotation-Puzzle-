@@ -1,0 +1,28 @@
+name: DartStream CI
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+
+      - name: Install DartStream CLI
+        run: dart pub global activate ds_dartstream
+
+      - name: Validate project
+        run: dartstream validate --project tesseract
+        env:
+          DARTSTREAM_TOKEN: ${{ secrets.DARTSTREAM_TOKEN }}
+
+      - name: Generate & deploy
+        run: dartstream configure --name tesseract --skip-examples
+        env:
+          DARTSTREAM_TOKEN: ${{ secrets.DARTSTREAM_TOKEN }}
