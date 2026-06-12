@@ -97,6 +97,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.0.7"
+  dartstream_client:
+    dependency: "direct main"
+    description:
+      name: dartstream_client
+      sha256: "71995dcfc1f1dde382d883fd52229175e6038816de609bc55bda53a4d44f42c3"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.1"
   dotenv:
     dependency: transitive
     description:
@@ -108,10 +116,11 @@ packages:
   ds_shelf:
     dependency: "direct main"
     description:
-      path: "../../../ds_dartstream/packages/standard/standard_extensions/platform_services/middleware/providers/ds_shelf"
-      relative: true
-    source: path
-    version: "0.0.1-pre+4"
+      name: ds_shelf
+      sha256: "8ae9715f001f6413c04af3a95139a72c97c4af34bc3dd82219b08b51017572cc"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.1"
   ds_standard_features:
     dependency: "direct main"
     description:
@@ -120,14 +129,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.1.7"
-  ds_storage_base:
-    dependency: "direct main"
-    description:
-      name: ds_storage_base
-      sha256: "67c6b0436779db0a8d36dacf9ef35d8af0526c11b0f07701310753bad2103dc8"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.0.1"
   fake_async:
     dependency: transitive
     description:
@@ -529,4 +530,4 @@ packages:
     source: hosted
     version: "3.1.3"
 sdks:
-  dart: ">=3.11.0 <4.0.0"
+  dart: ">=3.12.1 <4.0.0"
