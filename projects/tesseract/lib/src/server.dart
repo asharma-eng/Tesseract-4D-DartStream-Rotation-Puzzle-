@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:ds_shelf/ds_shelf.dart' hide DSShelfCore;
-import 'package:shelf_static/shelf_static.dart';
 import 'package:dartstream_client/dartstream_client.dart';
 
 // In-memory default configurations
@@ -84,42 +83,98 @@ Middleware dsShelfBodyParserMiddleware() {
   };
 }
 
-/// Creates and configures the Tesseract 4D Shelf-based server.
-DSShelfCore createServer() {
+DSShelfCore createServer({bool failFast = true}) {
   final server = DSShelfCore();
 
   // Add standard middlewares
   server.addMiddleware(dsShelfCorsMiddleware());
   server.addMiddleware(dsShelfBodyParserMiddleware());
 
-  // Initialize DartStream SaaS client
-  final token = Platform.environment['DARTSTREAM_TOKEN'] ?? 'DARTSTREAM_TOKEN_PLACEHOLDER';
+  // Initialize DartStream SaaS client using credentials from environment
+  final email = Platform.environment['DARTSTREAM_EMAIL'];
+  final password = Platform.environment['DARTSTREAM_PASSWORD'];
+  final firebaseApiKey = Platform.environment['DARTSTREAM_FIREBASE_API_KEY'];
+
+  if (failFast) {
+    if (email == null || email.isEmpty) {
+      throw StateError('DARTSTREAM_EMAIL environment variable is required.');
+    }
+    if (password == null || password.isEmpty) {
+      throw StateError('DARTSTREAM_PASSWORD environment variable is required.');
+    }
+    if (firebaseApiKey == null || firebaseApiKey.isEmpty) {
+      throw StateError('DARTSTREAM_FIREBASE_API_KEY environment variable is required.');
+    }
+  }
+
   final saasClient = DartStreamClient(
-    config: DartStreamConfig.prod(),
-    idToken: token,
+    config: DartStreamConfig.dev(firebaseApiKey: firebaseApiKey),
   );
-  print('📡 DartStream SaaS Client initialized.');
+  print('📡 DartStream SaaS Client initialized (Dev Environment).');
 
   // Session onboarding for SaaS APIs
   DartStreamSession? saasSession;
-  final sessionFuture = Future(() async {
+  String saasSessionState = 'none';
+
+  Future<void> onboardSession() async {
+    saasSessionState = 'initializing';
     try {
-      saasSession = await saasClient.onboardFirebaseIdToken(token);
+      final firebaseSession = await saasClient.createEmailPasswordSession(
+        email: email!,
+        password: password!,
+      );
+      saasSession = await saasClient.onboardFirebaseSession(firebaseSession);
+      saasSessionState = 'live';
       print('🔐 SaaS session onboarded successfully for user: ${saasSession?.userId}');
     } catch (e) {
-      print('Warning: Failed to onboard SaaS session: $e. Using local fallback session.');
+      print('Warning: Failed to onboard SaaS session: $e.');
+      if (failFast) {
+        throw StateError('Failed to onboard SaaS session: $e');
+      }
+      print('Using local fallback session.');
+      saasSessionState = 'fallback';
       saasSession = DartStreamSession(
-        idToken: token,
+        idToken: 'fallback-token',
         userId: 'dev-user',
         tenantId: 'dev-tenant',
         raw: {},
       );
     }
+  }
+
+  final sessionFuture = Future(() async {
+    if (!failFast && (email == null || password == null || firebaseApiKey == null)) {
+      saasSessionState = 'fallback';
+      saasSession = DartStreamSession(
+        idToken: 'fallback-token',
+        userId: 'dev-user',
+        tenantId: 'dev-tenant',
+        raw: {},
+      );
+      return;
+    }
+    await onboardSession();
   });
 
   Future<DartStreamSession> ensureSession() async {
     await sessionFuture;
     return saasSession!;
+  }
+
+  // Helper function to run SaaS actions with automatic retry on 401
+  Future<T> runWithRetry<T>(Future<T> Function(DartStreamSession session) action) async {
+    var session = await ensureSession();
+    try {
+      return await action(session);
+    } on DartStreamApiException catch (e) {
+      if (e.statusCode == 401 && saasSessionState != 'fallback') {
+        print('📡 SaaS call unauthorized (401). Attempting to re-authenticate...');
+        await onboardSession();
+        session = saasSession!;
+        return await action(session);
+      }
+      rethrow;
+    }
   }
 
   // Features and stats state
@@ -128,14 +183,12 @@ DSShelfCore createServer() {
 
   bool isLoaded = false;
   final loadFuture = Future(() async {
-    final session = await ensureSession();
-
     // 1. Try loading feature flags from ds-platform
     try {
-      final enableWaxis = await saasClient.featureFlag(session, 'enableWaxisRotation', fallback: true);
-      final showTarget = await saasClient.featureFlag(session, 'showTargetReference', fallback: true);
-      final hypercolor = await saasClient.featureFlag(session, 'hypercolorMode', fallback: false);
-      final hardcore = await saasClient.featureFlag(session, 'hardcoreDifficulty', fallback: false);
+      final enableWaxis = await runWithRetry((s) => saasClient.featureFlag(s, 'enableWaxisRotation', fallback: true));
+      final showTarget = await runWithRetry((s) => saasClient.featureFlag(s, 'showTargetReference', fallback: true));
+      final hypercolor = await runWithRetry((s) => saasClient.featureFlag(s, 'hypercolorMode', fallback: false));
+      final hardcore = await runWithRetry((s) => saasClient.featureFlag(s, 'hardcoreDifficulty', fallback: false));
       
       flags['enableWaxisRotation'] = enableWaxis;
       flags['showTargetReference'] = showTarget;
@@ -148,7 +201,7 @@ DSShelfCore createServer() {
 
     // 2. Try loading highscore from ds-experience cloud-save
     try {
-      final cloudData = await saasClient.experience.loadCloudSave(session, slotKey: 'highscore');
+      final cloudData = await runWithRetry((s) => saasClient.experience.loadCloudSave(s, slotKey: 'highscore'));
       if (cloudData != null && cloudData.containsKey('highscore')) {
         highscoreVal = cloudData['highscore'] as int;
         print('🏆 Highscore loaded from SaaS cloud-save: $highscoreVal');
@@ -180,8 +233,9 @@ DSShelfCore createServer() {
         'uptime': ProcessInfo.currentRss,
         'highscore': highscoreVal,
         'saas_client': {
-          'initialized': true,
+          'initialized': saasSessionState == 'live',
           'target': saasClient.config.authBaseUrl.toString(),
+          'saas_session': saasSessionState,
         }
       }),
       headers: {'Content-Type': 'application/json'},
@@ -201,20 +255,35 @@ DSShelfCore createServer() {
     await ensureLoaded();
     final parsedBody = request.context['ds_shelf.body'];
     if (parsedBody is Map) {
-      final session = await ensureSession();
-      parsedBody.forEach((key, value) async {
-        if (flags.containsKey(key) && value is bool) {
+      for (final entry in parsedBody.entries) {
+        final key = entry.key;
+        final value = entry.value;
+        if (key is String && flags.containsKey(key) && value is bool) {
           flags[key] = value;
           print('🎮 Game Feature Flag updated in-memory: $key = $value');
           
           try {
-            await saasClient.platform.updateFeatureFlag(session, key, updates: {'enabled': value});
-            print('SaaS: Updated feature flag $key = $value');
+            await runWithRetry((s) async {
+              try {
+                await saasClient.platform.updateFeatureFlag(s, key, updates: {'enabled': value});
+              } on DartStreamApiException catch (e) {
+                if (e.statusCode == 404) {
+                  print('SaaS: Feature flag $key does not exist. Creating it...');
+                  await saasClient.platform.createFeatureFlag(s, flag: {
+                    'key': key,
+                    'enabled': value,
+                  });
+                } else {
+                  rethrow;
+                }
+              }
+            });
+            print('SaaS: Updated/Created feature flag $key = $value');
           } catch (e) {
             print('Error updating feature flag $key on SaaS: $e');
           }
         }
-      });
+      }
 
       // Broadcast flag update to all game clients
       gameTelemetryBroadcast.add(jsonEncode({
@@ -254,11 +323,9 @@ DSShelfCore createServer() {
         'timestamp': DateTime.now().toIso8601String(),
       };
 
-      final session = await ensureSession();
-
       // Send telemetry event to ds-reactive SaaS
       try {
-        await saasClient.reactive.trackEvent(session, eventType: type, payload: payload);
+        await runWithRetry((s) => saasClient.reactive.trackEvent(s, eventType: type, payload: payload));
         print('SaaS: Telemetry event tracked: $type');
       } catch (e) {
         print('Error tracking telemetry event to SaaS: $e');
@@ -270,11 +337,11 @@ DSShelfCore createServer() {
 
         // Save new highscore to ds-experience SaaS cloud-save
         try {
-          await saasClient.experience.saveCloudSave(
-            session,
+          await runWithRetry((s) => saasClient.experience.saveCloudSave(
+            s,
             slotKey: 'highscore',
             payload: {'highscore': highscoreVal},
-          );
+          ));
           print('SaaS: Saved new highscore to cloud-save: $highscoreVal');
         } catch (e) {
           print('Error saving highscore to SaaS cloud-save: $e');

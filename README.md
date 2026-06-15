@@ -55,36 +55,40 @@ tesseract/
 
 ## 🚀 Getting Started
 
-### 1. Authenticate CLI (Optional)
-To associate your local workspace activity and build telemetry with your company's DartStream account, run the login command:
-```bash
-dartstream login --token DARTSTREAM_TOKEN_PLACEHOLDER
-```
+## 🚀 Getting Started
 
-### 2. Install Dependencies
-Ensure you have the Dart SDK installed. Run the following command in the project folder to retrieve dependencies:
+### Prerequisites
+- **Dart SDK**: version `^3.12.1` or higher (required by the `dartstream_client` package dependency).
+
+### 1. Install Dependencies
+Navigate to the project folder (`projects/tesseract`) and run:
 ```bash
+cd projects/tesseract
 dart pub get
 ```
 
-### 3. Configure SaaS Environment Token
-Set your account's Personal Token in your terminal:
+### 2. Configure SaaS Environment Variables
+Set your account's service credentials and API key in your terminal environment before running the server:
 - **PowerShell (Windows)**:
   ```powershell
-  $env:DARTSTREAM_TOKEN="DARTSTREAM_TOKEN_PLACEHOLDER"
+  $env:DARTSTREAM_EMAIL="your-service-account@domain.com"
+  $env:DARTSTREAM_PASSWORD="your-secure-password"
+  $env:DARTSTREAM_FIREBASE_API_KEY="your-firebase-api-key"
   ```
 - **Bash (Linux/Mac)**:
   ```bash
-  export DARTSTREAM_TOKEN="DARTSTREAM_TOKEN_PLACEHOLDER"
+  export DARTSTREAM_EMAIL="your-service-account@domain.com"
+  export DARTSTREAM_PASSWORD="your-secure-password"
+  export DARTSTREAM_FIREBASE_API_KEY="your-firebase-api-key"
   ```
 
-### 2. Run the Application
-Start the Tesseract server locally:
+### 3. Run the Application
+Start the Tesseract server locally from the `projects/tesseract` directory:
 ```bash
 dart run bin/main.dart
 ```
 
-### 3. Open in Browser
+### 4. Open in Browser
 Visit the active web dashboard in your browser:
 - **Game URL**: [http://localhost:8080/](http://localhost:8080/)
 - **Live Stream Logs**: [http://localhost:8080/api/stream](http://localhost:8080/api/stream)
@@ -98,3 +102,13 @@ Visit the active web dashboard in your browser:
    - Adjust **XW, YW, and ZW** to fold the shape in the 4th dimension (changing spacing between the inner and outer hypercube structures).
 3. Align the vertices of the main structure to match the blueprint.
 4. When the **Alignment Match** reaches the success threshold (95% standard or 98% hardcore mode), the lock will decrypt and unlock the **Next Level**!
+
+---
+
+## 👥 Session Architecture & Multi-Tenancy
+
+Currently, this application uses a **Shared-Session Design**:
+- A single global server-side session is established at server startup using service-account credentials.
+- All connected game clients/players share this single server-side session, which means they share the same feature flags, game state, and high-score slot on the SaaS platform.
+- This design functions like a global shared arcade cabinet.
+- *Alternative*: For individual user progress/multi-tenancy, clients would pass their own authentication tokens from the browser to the backend.

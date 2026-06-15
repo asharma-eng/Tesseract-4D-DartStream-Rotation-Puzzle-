@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:shelf/shelf_io.dart' as shelf_io;
-import 'package:tesseract/main.dart';
+import 'package:tesseract/tesseract.dart';
 
 void main() async {
   print('🎮 Starting Tesseract 4D Game Server...');

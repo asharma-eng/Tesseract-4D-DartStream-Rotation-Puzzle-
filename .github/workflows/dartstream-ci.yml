@@ -14,6 +14,18 @@ jobs:
         with:
           sdk: stable
 
+      - name: Install dependencies
+        run: dart pub get
+        working-directory: projects/tesseract
+
+      - name: Analyze project
+        run: dart analyze
+        working-directory: projects/tesseract
+
+      - name: Run tests
+        run: dart test
+        working-directory: projects/tesseract
+
       - name: Install DartStream CLI
         run: dart pub global activate ds_dartstream
 

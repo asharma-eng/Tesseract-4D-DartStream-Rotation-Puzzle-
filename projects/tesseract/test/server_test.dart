@@ -1,15 +1,15 @@
 import 'dart:convert';
 import 'package:shelf/shelf.dart';
 import 'package:test/test.dart';
-import 'package:tesseract/main.dart';
+import 'package:tesseract/tesseract.dart';
 
 void main() {
   group('Tesseract Server API tests', () {
     late Handler handler;
 
     setUp(() {
-      // Create a server instance (falling back to in-memory state since storageManager is null)
-      final server = createServer();
+      // Create a server instance with failFast disabled to allow local test execution with fallback session
+      final server = createServer(failFast: false);
       handler = server.handler;
     });
 
@@ -23,7 +23,8 @@ void main() {
       expect(body['status'], equals('active'));
       expect(body['engine'], equals('DartStream Standard Engine'));
       expect(body['highscore'], equals(1200));
-      expect(body['saas_client']['initialized'], isTrue);
+      expect(body['saas_client']['initialized'], isFalse); // False in fallback mode during local tests
+      expect(body['saas_client']['saas_session'], equals('fallback'));
       expect(body['saas_client']['target'], contains('dartstream.io'));
     });
 
