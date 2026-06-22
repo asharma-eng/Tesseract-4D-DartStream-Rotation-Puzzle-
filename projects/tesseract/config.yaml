@@ -1,5 +1,5 @@
 vendor: local
-auth: none
+auth: firebase
 database: none
 cicd: none
 customTools:

@@ -34,7 +34,5 @@ jobs:
         env:
           DARTSTREAM_TOKEN: ${{ secrets.DARTSTREAM_TOKEN }}
 
-      - name: Generate & deploy
+      - name: Generate configuration
         run: dartstream configure --name tesseract --skip-examples
-        env:
-          DARTSTREAM_TOKEN: ${{ secrets.DARTSTREAM_TOKEN }}

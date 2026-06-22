@@ -183,31 +183,35 @@ DSShelfCore createServer({bool failFast = true}) {
 
   bool isLoaded = false;
   final loadFuture = Future(() async {
-    // 1. Try loading feature flags from ds-platform
-    try {
-      final enableWaxis = await runWithRetry((s) => saasClient.featureFlag(s, 'enableWaxisRotation', fallback: true));
-      final showTarget = await runWithRetry((s) => saasClient.featureFlag(s, 'showTargetReference', fallback: true));
-      final hypercolor = await runWithRetry((s) => saasClient.featureFlag(s, 'hypercolorMode', fallback: false));
-      final hardcore = await runWithRetry((s) => saasClient.featureFlag(s, 'hardcoreDifficulty', fallback: false));
-      
-      flags['enableWaxisRotation'] = enableWaxis;
-      flags['showTargetReference'] = showTarget;
-      flags['hypercolorMode'] = hypercolor;
-      flags['hardcoreDifficulty'] = hardcore;
-      print('🎮 Feature flags loaded from SaaS platform.');
-    } catch (e) {
-      print('Error loading flags from SaaS: $e. Using in-memory defaults.');
-    }
-
-    // 2. Try loading highscore from ds-experience cloud-save
-    try {
-      final cloudData = await runWithRetry((s) => saasClient.experience.loadCloudSave(s, slotKey: 'highscore'));
-      if (cloudData != null && cloudData.containsKey('highscore')) {
-        highscoreVal = cloudData['highscore'] as int;
-        print('🏆 Highscore loaded from SaaS cloud-save: $highscoreVal');
+    if (saasSessionState == 'fallback') {
+      print('📡 Running in fallback mode. Skipping live SaaS calls.');
+    } else {
+      // 1. Try loading feature flags from ds-platform
+      try {
+        final enableWaxis = await runWithRetry((s) => saasClient.featureFlag(s, 'enableWaxisRotation', fallback: true));
+        final showTarget = await runWithRetry((s) => saasClient.featureFlag(s, 'showTargetReference', fallback: true));
+        final hypercolor = await runWithRetry((s) => saasClient.featureFlag(s, 'hypercolorMode', fallback: false));
+        final hardcore = await runWithRetry((s) => saasClient.featureFlag(s, 'hardcoreDifficulty', fallback: false));
+        
+        flags['enableWaxisRotation'] = enableWaxis;
+        flags['showTargetReference'] = showTarget;
+        flags['hypercolorMode'] = hypercolor;
+        flags['hardcoreDifficulty'] = hardcore;
+        print('🎮 Feature flags loaded from SaaS platform.');
+      } catch (e) {
+        print('Error loading flags from SaaS: $e. Using in-memory defaults.');
       }
-    } catch (e) {
-      print('Error loading highscore from SaaS: $e. Using in-memory defaults.');
+
+      // 2. Try loading highscore from ds-experience cloud-save
+      try {
+        final cloudData = await runWithRetry((s) => saasClient.experience.loadCloudSave(s, slotKey: 'highscore'));
+        if (cloudData != null && cloudData.containsKey('highscore')) {
+          highscoreVal = cloudData['highscore'] as int;
+          print('🏆 Highscore loaded from SaaS cloud-save: $highscoreVal');
+        }
+      } catch (e) {
+        print('Error loading highscore from SaaS: $e. Using in-memory defaults.');
+      }
     }
     
     isLoaded = true;
@@ -262,25 +266,29 @@ DSShelfCore createServer({bool failFast = true}) {
           flags[key] = value;
           print('🎮 Game Feature Flag updated in-memory: $key = $value');
           
-          try {
-            await runWithRetry((s) async {
-              try {
-                await saasClient.platform.updateFeatureFlag(s, key, updates: {'enabled': value});
-              } on DartStreamApiException catch (e) {
-                if (e.statusCode == 404) {
-                  print('SaaS: Feature flag $key does not exist. Creating it...');
-                  await saasClient.platform.createFeatureFlag(s, flag: {
-                    'key': key,
-                    'enabled': value,
-                  });
-                } else {
-                  rethrow;
+          if (saasSessionState == 'fallback') {
+            print('📡 Fallback mode: Skipping live SaaS feature flag update.');
+          } else {
+            try {
+              await runWithRetry((s) async {
+                try {
+                  await saasClient.platform.updateFeatureFlag(s, key, updates: {'enabled': value});
+                } on DartStreamApiException catch (e) {
+                  if (e.statusCode == 404) {
+                    print('SaaS: Feature flag $key does not exist. Creating it...');
+                    await saasClient.platform.createFeatureFlag(s, flag: {
+                      'key': key,
+                      'enabled': value,
+                    });
+                  } else {
+                    rethrow;
+                  }
                 }
-              }
-            });
-            print('SaaS: Updated/Created feature flag $key = $value');
-          } catch (e) {
-            print('Error updating feature flag $key on SaaS: $e');
+              });
+              print('SaaS: Updated/Created feature flag $key = $value');
+            } catch (e) {
+              print('Error updating feature flag $key on SaaS: $e');
+            }
           }
         }
       }
@@ -324,11 +332,15 @@ DSShelfCore createServer({bool failFast = true}) {
       };
 
       // Send telemetry event to ds-reactive SaaS
-      try {
-        await runWithRetry((s) => saasClient.reactive.trackEvent(s, eventType: type, payload: payload));
-        print('SaaS: Telemetry event tracked: $type');
-      } catch (e) {
-        print('Error tracking telemetry event to SaaS: $e');
+      if (saasSessionState == 'fallback') {
+        print('📡 Fallback mode: Skipping live SaaS telemetry tracking.');
+      } else {
+        try {
+          await runWithRetry((s) => saasClient.reactive.trackEvent(s, eventType: type, payload: payload));
+          print('SaaS: Telemetry event tracked: $type');
+        } catch (e) {
+          print('Error tracking telemetry event to SaaS: $e');
+        }
       }
 
       if (type == 'level_win' && score < highscoreVal) {
@@ -336,15 +348,19 @@ DSShelfCore createServer({bool failFast = true}) {
         payload['new_highscore'] = true;
 
         // Save new highscore to ds-experience SaaS cloud-save
-        try {
-          await runWithRetry((s) => saasClient.experience.saveCloudSave(
-            s,
-            slotKey: 'highscore',
-            payload: {'highscore': highscoreVal},
-          ));
-          print('SaaS: Saved new highscore to cloud-save: $highscoreVal');
-        } catch (e) {
-          print('Error saving highscore to SaaS cloud-save: $e');
+        if (saasSessionState == 'fallback') {
+          print('📡 Fallback mode: Skipping live SaaS highscore save.');
+        } else {
+          try {
+            await runWithRetry((s) => saasClient.experience.saveCloudSave(
+              s,
+              slotKey: 'highscore',
+              payload: {'highscore': highscoreVal},
+            ));
+            print('SaaS: Saved new highscore to cloud-save: $highscoreVal');
+          } catch (e) {
+            print('Error saving highscore to SaaS cloud-save: $e');
+          }
         }
       }
 
