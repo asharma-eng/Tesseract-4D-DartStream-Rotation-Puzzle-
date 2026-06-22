@@ -2,7 +2,7 @@
 name: tesseract
 version: stable
 type: new
-framework: shelf
+framework: flutter_web
 middleware: shelf
 created_at: 2026-06-10T21:42:50.877004
 

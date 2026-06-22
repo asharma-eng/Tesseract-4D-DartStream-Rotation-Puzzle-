@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:shelf/shelf.dart';
 import 'package:test/test.dart';
-import 'package:tesseract/tesseract.dart';
+import 'package:tesseract/main.dart';
 
 void main() {
   group('Tesseract Server API tests', () {
