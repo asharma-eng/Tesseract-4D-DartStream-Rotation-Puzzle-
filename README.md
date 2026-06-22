@@ -18,7 +18,7 @@ The application demonstrates real-time Server-Sent Events (SSE) broadcasting arc
 - **SaaS Telemetry Streaming**: Logs real-time game activity to the **DartStream SaaS Event Engine (`ds-reactive`)** and broadcasts active stream feedback to the client over SSE.
 - **SaaS Cloud Save**: Persists player decryption highscores dynamically using **DartStream Cloud Save (`ds-experience`)** snapshots.
 - **SaaS Feature Flags**: Dynamically synchronizes puzzle settings (difficulty, W-axis rotation, reference blueprints) directly from your **DartStream Platform (`ds-platform`)** configurations.
-- **Scripted Game Master Chat**: Connects to an automated assistant route (`/api/chat`) that answers questions about 4D coordinate geometries and provides clues.
+- **Scripted Game Master Chat**: Connects to a scripted chat route (`/api/chat`) that answers questions about 4D coordinate geometries and provides clues.
 - **Cyberpunk Dark Theme**: Modern glassmorphic console style utilizing Google Fonts (Inter, JetBrains Mono) and CSS gradients.
 
 ---
@@ -30,6 +30,8 @@ tesseract/
 │   └── main.dart          # Shelf Backend server, SSE hub, chat and telemetry endpoints
 ├── config.yaml            # Active project features configuration
 ├── dartstream.yaml        # Project metadata
+├── lib/
+│   └── main.dart          # Project entrypoint exporting server
 ├── pubspec.yaml           # Dependencies and local package overrides
 ├── web/
 │   ├── index.html         # Console UI layout
@@ -55,20 +57,23 @@ tesseract/
 
 ## 🚀 Getting Started
 
-## 🚀 Getting Started
-
 ### Prerequisites
-- **Dart SDK**: version `^3.12.1` or higher (required by the `dartstream_client` package dependency).
+- **Dart SDK**: version `^3.12.1` or higher (required due to dependencies in `dartstream_client`).
 
-### 1. Install Dependencies
-Navigate to the project folder (`projects/tesseract`) and run:
+### 1. Authenticate CLI (Optional)
+To associate your local workspace activity and build telemetry with your company's DartStream account, run the login command:
 ```bash
-cd projects/tesseract
+dartstream login
+```
+
+### 2. Install Dependencies
+Run the following command in the project folder (`projects/tesseract`) to retrieve dependencies:
+```bash
 dart pub get
 ```
 
-### 2. Configure SaaS Environment Variables
-Set your account's service credentials and API key in your terminal environment before running the server:
+### 3. Configure SaaS Environment Variables
+Set your account's service credentials and API key in your terminal environment:
 - **PowerShell (Windows)**:
   ```powershell
   $env:DARTSTREAM_EMAIL="your-service-account@domain.com"
@@ -82,13 +87,13 @@ Set your account's service credentials and API key in your terminal environment 
   export DARTSTREAM_FIREBASE_API_KEY="your-firebase-api-key"
   ```
 
-### 3. Run the Application
-Start the Tesseract server locally from the `projects/tesseract` directory:
+### 4. Run the Application
+Start the Tesseract server locally:
 ```bash
 dart run bin/main.dart
 ```
 
-### 4. Open in Browser
+### 5. Open in Browser
 Visit the active web dashboard in your browser:
 - **Game URL**: [http://localhost:8080/](http://localhost:8080/)
 - **Live Stream Logs**: [http://localhost:8080/api/stream](http://localhost:8080/api/stream)
