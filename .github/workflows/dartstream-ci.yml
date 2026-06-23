@@ -27,7 +27,7 @@ jobs:
         working-directory: projects/tesseract
 
       - name: Install DartStream CLI
-        run: dart pub global activate ds_dartstream
+        run: dart pub global activate --source git https://github.com/aortem/dartstream --git-path dartstream/backend/packages/cli/ds_cli
 
       - name: Validate project
         run: dartstream validate --project tesseract
