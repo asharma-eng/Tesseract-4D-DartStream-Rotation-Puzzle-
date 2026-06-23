@@ -39,6 +39,12 @@ jobs:
             exit 1
           fi
           dart pub global activate --source path ./temp_ds/packages/cli/ds_cli
+          echo "=== DEBUG INFO ==="
+          dart pub global list
+          which dartstream || echo "which failed"
+          dartstream --help || echo "dartstream --help failed"
+          ls -la $PUB_CACHE_DIR/bin || echo "ls bin failed"
+          cat $PUB_CACHE_DIR/bin/dartstream || echo "cat dartstream failed"
 
       - name: Validate project
         run: dartstream validate --project tesseract
