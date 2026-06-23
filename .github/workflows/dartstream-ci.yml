@@ -29,9 +29,16 @@ jobs:
       - name: Install DartStream CLI
         run: |
           dart pub global activate ds_dartstream 0.0.7
-          cp -r $HOME/.pub-cache/hosted/pub.dev/ds_dartstream-0.0.7 ./temp_ds
+          PUB_CACHE_DIR="${PUB_CACHE:-$HOME/.pub-cache}"
+          if [ -d "$PUB_CACHE_DIR/hosted/pub.dev/ds_dartstream-0.0.7" ]; then
+            cp -r "$PUB_CACHE_DIR/hosted/pub.dev/ds_dartstream-0.0.7" ./temp_ds
+          elif [ -d "$PUB_CACHE_DIR/hosted/pub.dartlang.org/ds_dartstream-0.0.7" ]; then
+            cp -r "$PUB_CACHE_DIR/hosted/pub.dartlang.org/ds_dartstream-0.0.7" ./temp_ds
+          else
+            echo "Error: ds_dartstream-0.0.7 not found in cache"
+            exit 1
+          fi
           dart pub global activate --source path ./temp_ds/packages/cli/ds_cli
-          rm -rf ./temp_ds
 
       - name: Validate project
         run: dartstream validate --project tesseract
