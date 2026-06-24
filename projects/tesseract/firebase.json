@@ -1,0 +1,21 @@
+{
+  "hosting": {
+    "site": "sample-app-ashish-sharma",
+    "public": "web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "/auth",
+        "destination": "/auth.html"
+      },
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}
