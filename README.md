@@ -98,6 +98,15 @@ Visit the active web dashboard in your browser:
 - **Game URL**: [http://localhost:8080/](http://localhost:8080/)
 - **Live Stream Logs**: [http://localhost:8080/api/stream](http://localhost:8080/api/stream)
 
+### 6. Deploy to Firebase Hosting
+From the repository root, deploy the Tesseract web app with:
+```bash
+firebase deploy --only hosting
+```
+
+The hosted auth page is served from:
+- **Auth URL**: `/auth`
+
 ---
 
 ## 🎮 How to Play
