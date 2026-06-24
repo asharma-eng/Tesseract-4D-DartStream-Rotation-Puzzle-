@@ -14,3 +14,9 @@ build/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Firebase cache
+.firebase/
+
+# Firebase hosting public folder (outdated, firebase.json points to web/)
+projects/tesseract/public/
