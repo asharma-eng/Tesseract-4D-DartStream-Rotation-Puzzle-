@@ -379,7 +379,214 @@ DSShelfCore createServer({bool failFast = true}) {
     );
   });
 
+  // ── User Auth API Routes ───────────────────────────────────────────────────
+  // These routes allow browser users to sign in / register via DartStream auth.
+  // They use the same saasClient already in scope but act on behalf of the user.
+
+  // POST /api/auth/register — Create a new user account (Firebase email/password)
+  server.addPostRoute('/api/auth/register', (Request request) async {
+    final parsedBody = request.context['ds_shelf.body'];
+    if (parsedBody is! Map) {
+      return Response.badRequest(
+        body: jsonEncode({'error': 'Invalid request body. Expected JSON with email and password.'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+
+    final email    = parsedBody['email']?.toString() ?? '';
+    final password = parsedBody['password']?.toString() ?? '';
+
+    if (email.isEmpty || password.isEmpty) {
+      return Response.badRequest(
+        body: jsonEncode({'error': 'email and password are required.'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+
+    try {
+      // 1. Create Firebase account via DartStream auth client
+      final firebaseSession = await saasClient.createEmailPasswordSession(
+        email: email,
+        password: password,
+      );
+
+      // 2. Onboard the Firebase session into DartStream SaaS
+      DartStreamSession dsSession;
+      try {
+        dsSession = await saasClient.onboardFirebaseSession(firebaseSession);
+      } catch (e) {
+        print('Warning: DartStream onboard failed for new user, using Firebase session directly: $e');
+        dsSession = DartStreamSession(
+          idToken: firebaseSession.idToken,
+          userId:  firebaseSession.localId,
+          tenantId: firebaseSession.localId,
+          email: firebaseSession.email,
+          raw: {},
+        );
+      }
+
+      print('👤 New user registered via API: ${firebaseSession.email}');
+      return Response.ok(
+        jsonEncode({
+          'idToken': dsSession.idToken,
+          'userId':  dsSession.userId,
+          'email':   firebaseSession.email,
+          'tenantId': dsSession.tenantId,
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } on DartStreamFirebaseAuthException catch (e) {
+      print('Auth register error (Firebase): $e');
+      return Response(400,
+        body: jsonEncode({'error': e.code ?? e.message}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      print('Auth register error: $e');
+      return Response.internalServerError(
+        body: jsonEncode({'error': 'Registration failed. Please try again.'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  });
+
+  // POST /api/auth/login — Sign in an existing user
+  server.addPostRoute('/api/auth/login', (Request request) async {
+    final parsedBody = request.context['ds_shelf.body'];
+    if (parsedBody is! Map) {
+      return Response.badRequest(
+        body: jsonEncode({'error': 'Invalid request body. Expected JSON with email and password.'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+
+    final email    = parsedBody['email']?.toString() ?? '';
+    final password = parsedBody['password']?.toString() ?? '';
+
+    if (email.isEmpty || password.isEmpty) {
+      return Response.badRequest(
+        body: jsonEncode({'error': 'email and password are required.'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+
+    try {
+      // 1. Sign in with email/password via Firebase
+      final firebaseSession = await saasClient.signInWithEmailPassword(
+        email: email,
+        password: password,
+      );
+
+      // 2. Onboard into DartStream SaaS session
+      DartStreamSession dsSession;
+      try {
+        dsSession = await saasClient.onboardFirebaseSession(firebaseSession);
+      } catch (e) {
+        print('Warning: DartStream onboard failed on login, using Firebase session directly: $e');
+        dsSession = DartStreamSession(
+          idToken: firebaseSession.idToken,
+          userId:  firebaseSession.localId,
+          tenantId: firebaseSession.localId,
+          email: firebaseSession.email,
+          raw: {},
+        );
+      }
+
+      print('🔑 User signed in via API: ${firebaseSession.email}');
+      return Response.ok(
+        jsonEncode({
+          'idToken': dsSession.idToken,
+          'userId':  dsSession.userId,
+          'email':   firebaseSession.email,
+          'tenantId': dsSession.tenantId,
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } on DartStreamFirebaseAuthException catch (e) {
+      print('Auth login error (Firebase): $e');
+      // Normalize Firebase error codes for the frontend friendly-error handler
+      final code = e.code ?? 'INVALID_LOGIN_CREDENTIALS';
+      return Response(401,
+        body: jsonEncode({'error': code}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      print('Auth login error: $e');
+      return Response.internalServerError(
+        body: jsonEncode({'error': 'Login failed. Please try again.'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  });
+
+  // POST /api/auth/logout — Server-side logout (client clears sessionStorage)
+  server.addPostRoute('/api/auth/logout', (Request request) async {
+    // Session tokens are JWTs managed client-side.
+    // Server acknowledges and the client removes its stored session.
+    print('🔓 User logout acknowledged.');
+    return Response.ok(
+      jsonEncode({'status': 'ok', 'message': 'Logged out successfully.'}),
+      headers: {'Content-Type': 'application/json'},
+    );
+  });
+
+  // POST /api/auth/reset-password — Send a password reset email
+  server.addPostRoute('/api/auth/reset-password', (Request request) async {
+    final parsedBody = request.context['ds_shelf.body'];
+    final email = parsedBody is Map ? parsedBody['email']?.toString() ?? '' : '';
+
+    if (email.isEmpty) {
+      return Response.badRequest(
+        body: jsonEncode({'error': 'email is required.'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+
+    final apiKey = Platform.environment['DARTSTREAM_FIREBASE_API_KEY'];
+    if (apiKey == null || apiKey.isEmpty) {
+      return Response.internalServerError(
+        body: jsonEncode({'error': 'Server misconfiguration: Firebase API key not set.'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+
+    try {
+      // Call Firebase Identity Toolkit password reset endpoint
+      final uri = Uri.https(
+        'identitytoolkit.googleapis.com',
+        '/v1/accounts:sendOobCode',
+        {'key': apiKey},
+      );
+      final httpClient = HttpClient();
+      final req = await httpClient.postUrl(uri);
+      req.headers.set('content-type', 'application/json');
+      req.write(jsonEncode({'requestType': 'PASSWORD_RESET', 'email': email}));
+      final resp = await req.close();
+      httpClient.close();
+
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        print('📧 Password reset email sent to: $email');
+        return Response.ok(
+          jsonEncode({'status': 'ok', 'message': 'Password reset email sent.'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      } else {
+        return Response(resp.statusCode,
+          body: jsonEncode({'error': 'Failed to send reset email.'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+    } catch (e) {
+      print('Error sending password reset: $e');
+      return Response.internalServerError(
+        body: jsonEncode({'error': 'Failed to send reset email.'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  });
+
   // 4. API - AI / Scripted Game Master Assistant
+
   server.addPostRoute('/api/chat', (Request request) async {
     final parsedBody = request.context['ds_shelf.body'];
     String userMessage = '';

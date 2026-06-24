@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tesseract 4D // DartStream Auth</title>
+  <meta name="description" content="Sign in or create an account to access Tesseract 4D — the DartStream-powered 4D hypercube puzzle game.">
+  <!-- Google Fonts: Inter and JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* ─── Auth Page Overrides ─────────────────────────────────────────────── */
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 1.5rem;
+    }
+
+    /* Animated 4D background particles */
+    .auth-bg {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .auth-bg canvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Auth Container */
+    .auth-container {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 440px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* Auth Brand Header */
+    .auth-brand {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .auth-brand .brand-icon {
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, rgba(0, 242, 254, 0.12) 0%, rgba(184, 0, 255, 0.12) 100%);
+      border: 1px solid rgba(0, 242, 254, 0.25);
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      box-shadow: 0 0 30px rgba(0, 242, 254, 0.1), 0 8px 32px rgba(0,0,0,0.4);
+      animation: icon-glow 3s ease-in-out infinite alternate;
+    }
+
+    @keyframes icon-glow {
+      0%  { box-shadow: 0 0 20px rgba(0, 242, 254, 0.1), 0 8px 32px rgba(0,0,0,0.4); }
+      100%{ box-shadow: 0 0 40px rgba(0, 242, 254, 0.25), 0 8px 32px rgba(0,0,0,0.4), 0 0 60px rgba(184,0,255,0.1); }
+    }
+
+    .auth-brand h1 {
+      font-size: 1.75rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      background: linear-gradient(135deg, #FFF 0%, var(--accent-cyan) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .auth-brand .sub {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      letter-spacing: 0.06em;
+      font-family: var(--font-mono);
+    }
+
+    /* Auth Card */
+    .auth-card {
+      background: var(--bg-surface);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--border-glass);
+      border-radius: 20px;
+      box-shadow: var(--shadow-card);
+      overflow: hidden;
+    }
+
+    /* Tabs */
+    .auth-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      border-bottom: 1px solid var(--border-glass);
+    }
+
+    .auth-tab {
+      padding: 1rem;
+      text-align: center;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      cursor: pointer;
+      background: transparent;
+      border: none;
+      transition: var(--transition-smooth);
+      position: relative;
+    }
+
+    .auth-tab::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent-cyan), var(--accent-indigo));
+      transform: scaleX(0);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: 2px 2px 0 0;
+    }
+
+    .auth-tab.active {
+      color: var(--text-main);
+    }
+
+    .auth-tab.active::after {
+      transform: scaleX(1);
+    }
+
+    .auth-tab:hover:not(.active) {
+      color: var(--text-main);
+      background: rgba(255,255,255,0.02);
+    }
+
+    /* Tab Panels */
+    .auth-panels {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .auth-panel {
+      padding: 2rem;
+      display: none;
+      flex-direction: column;
+      gap: 1.25rem;
+      animation: panel-slide-in 0.3s ease-out;
+    }
+
+    .auth-panel.active {
+      display: flex;
+    }
+
+    @keyframes panel-slide-in {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Form Groups */
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .form-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    .form-input {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border-glass);
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
+      color: var(--text-main);
+      font-size: 0.85rem;
+      font-family: var(--font-sans);
+      transition: var(--transition-smooth);
+      width: 100%;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 0 3px rgba(0, 242, 254, 0.08), var(--shadow-glow);
+      background: rgba(0, 0, 0, 0.4);
+    }
+
+    .form-input::placeholder {
+      color: rgba(156, 163, 175, 0.45);
+    }
+
+    .form-input.error {
+      border-color: var(--danger);
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.08);
+    }
+
+    /* Password toggle wrapper */
+    .input-wrapper {
+      position: relative;
+    }
+
+    .input-wrapper .form-input {
+      padding-right: 2.75rem;
+    }
+
+    .password-toggle {
+      position: absolute;
+      right: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      transition: color 0.2s;
+      padding: 0.25rem;
+      display: flex;
+      align-items: center;
+    }
+
+    .password-toggle:hover { color: var(--accent-cyan); }
+
+    /* Alert/Error Message */
+    .auth-alert {
+      padding: 0.65rem 1rem;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      line-height: 1.4;
+      display: none;
+      animation: panel-slide-in 0.2s ease-out;
+    }
+
+    .auth-alert.error {
+      display: block;
+      background: rgba(239, 68, 68, 0.08);
+      border: 1px solid rgba(239, 68, 68, 0.25);
+      color: #FCA5A5;
+    }
+
+    .auth-alert.success {
+      display: block;
+      background: rgba(16, 185, 129, 0.08);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      color: #6EE7B7;
+    }
+
+    /* Submit Button */
+    .auth-submit {
+      width: 100%;
+      padding: 0.85rem 1.5rem;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      transition: var(--transition-smooth);
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(135deg, var(--accent-cyan) 0%, var(--accent-indigo) 100%);
+      color: #060913;
+      box-shadow: 0 4px 20px rgba(0, 242, 254, 0.25);
+    }
+
+    .auth-submit:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 28px rgba(0, 242, 254, 0.4);
+    }
+
+    .auth-submit:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .auth-submit:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .auth-submit .btn-text { transition: opacity 0.2s; }
+
+    .auth-submit.loading .btn-text { opacity: 0; }
+
+    .auth-submit .btn-spinner {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .auth-submit.loading .btn-spinner { opacity: 1; }
+
+    .spinner-ring {
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(6,9,19,0.3);
+      border-top-color: #060913;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Divider */
+    .auth-divider {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      color: var(--text-muted);
+      font-size: 0.7rem;
+    }
+
+    .auth-divider::before,
+    .auth-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border-glass);
+    }
+
+    /* Password strength meter */
+    .strength-meter {
+      display: flex;
+      gap: 4px;
+      margin-top: 0.35rem;
+    }
+
+    .strength-bar {
+      height: 3px;
+      flex: 1;
+      border-radius: 2px;
+      background: rgba(255,255,255,0.08);
+      transition: background 0.3s ease;
+    }
+
+    .strength-bar.weak   { background: var(--danger); }
+    .strength-bar.medium { background: #F59E0B; }
+    .strength-bar.strong { background: var(--success); }
+
+    .strength-label {
+      font-size: 0.6rem;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+
+    /* Forgot password link */
+    .auth-link {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      text-align: center;
+      cursor: pointer;
+      transition: color 0.2s;
+      background: none;
+      border: none;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      text-decoration-color: transparent;
+    }
+
+    .auth-link:hover {
+      color: var(--accent-cyan);
+      text-decoration-color: var(--accent-cyan);
+    }
+
+    /* Footer note */
+    .auth-footer {
+      text-align: center;
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      line-height: 1.6;
+    }
+
+    .auth-footer a {
+      color: var(--accent-cyan);
+      text-decoration: none;
+    }
+
+    /* Logout button in game header */
+    #logout-btn {
+      background: rgba(239, 68, 68, 0.08);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      color: #FCA5A5;
+      padding: 0.35rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition-smooth);
+    }
+
+    #logout-btn:hover {
+      background: rgba(239, 68, 68, 0.16);
+      border-color: rgba(239, 68, 68, 0.4);
+    }
+
+    /* User info chip in game header */
+    .user-chip {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .user-chip .user-email {
+      font-size: 0.65rem;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+      max-width: 140px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Animated background canvas -->
+  <div class="auth-bg">
+    <canvas id="bg-canvas"></canvas>
+  </div>
+
+  <div class="auth-container">
+
+    <!-- Brand Header -->
+    <div class="auth-brand">
+      <div class="brand-icon">✦</div>
+      <h1>TESSERACT 4D</h1>
+      <span class="sub">DARTSTREAM SECURE GATEWAY</span>
+    </div>
+
+    <!-- Auth Card -->
+    <div class="auth-card">
+
+      <!-- Tab Headers -->
+      <div class="auth-tabs" role="tablist">
+        <button class="auth-tab active" id="tab-login" role="tab" aria-selected="true" aria-controls="panel-login" onclick="switchTab('login')">
+          SIGN IN
+        </button>
+        <button class="auth-tab" id="tab-register" role="tab" aria-selected="false" aria-controls="panel-register" onclick="switchTab('register')">
+          CREATE ACCOUNT
+        </button>
+      </div>
+
+      <!-- Tab Panels -->
+      <div class="auth-panels">
+
+        <!-- LOGIN PANEL -->
+        <div class="auth-panel active" id="panel-login" role="tabpanel" aria-labelledby="tab-login">
+          <div class="auth-alert" id="login-alert"></div>
+
+          <form id="login-form" novalidate>
+            <div style="display:flex; flex-direction:column; gap:1.25rem;">
+              <div class="form-group">
+                <label class="form-label" for="login-email">EMAIL ADDRESS</label>
+                <input
+                  class="form-input"
+                  id="login-email"
+                  type="email"
+                  placeholder="you@example.com"
+                  autocomplete="email"
+                  required
+                >
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="login-password">PASSWORD</label>
+                <div class="input-wrapper">
+                  <input
+                    class="form-input"
+                    id="login-password"
+                    type="password"
+                    placeholder="••••••••"
+                    autocomplete="current-password"
+                    required
+                  >
+                  <button type="button" class="password-toggle" onclick="togglePassword('login-password', this)" aria-label="Toggle password visibility">
+                    👁
+                  </button>
+                </div>
+              </div>
+
+              <button class="auth-submit" type="submit" id="login-btn">
+                <span class="btn-text">SIGN IN TO TESSERACT</span>
+                <span class="btn-spinner"><span class="spinner-ring"></span></span>
+              </button>
+
+              <button type="button" class="auth-link" id="forgot-link" onclick="switchTab('reset')">
+                Forgot your password?
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- REGISTER PANEL -->
+        <div class="auth-panel" id="panel-register" role="tabpanel" aria-labelledby="tab-register">
+          <div class="auth-alert" id="register-alert"></div>
+
+          <form id="register-form" novalidate>
+            <div style="display:flex; flex-direction:column; gap:1.25rem;">
+              <div class="form-group">
+                <label class="form-label" for="register-email">EMAIL ADDRESS</label>
+                <input
+                  class="form-input"
+                  id="register-email"
+                  type="email"
+                  placeholder="you@example.com"
+                  autocomplete="email"
+                  required
+                >
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="register-password">PASSWORD</label>
+                <div class="input-wrapper">
+                  <input
+                    class="form-input"
+                    id="register-password"
+                    type="password"
+                    placeholder="Min. 8 characters"
+                    autocomplete="new-password"
+                    required
+                    minlength="8"
+                  >
+                  <button type="button" class="password-toggle" onclick="togglePassword('register-password', this)" aria-label="Toggle password visibility">
+                    👁
+                  </button>
+                </div>
+                <div class="strength-meter" id="strength-bars">
+                  <div class="strength-bar" id="sb1"></div>
+                  <div class="strength-bar" id="sb2"></div>
+                  <div class="strength-bar" id="sb3"></div>
+                  <div class="strength-bar" id="sb4"></div>
+                </div>
+                <span class="strength-label" id="strength-label"></span>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="register-confirm">CONFIRM PASSWORD</label>
+                <div class="input-wrapper">
+                  <input
+                    class="form-input"
+                    id="register-confirm"
+                    type="password"
+                    placeholder="••••••••"
+                    autocomplete="new-password"
+                    required
+                  >
+                  <button type="button" class="password-toggle" onclick="togglePassword('register-confirm', this)" aria-label="Toggle confirm password visibility">
+                    👁
+                  </button>
+                </div>
+              </div>
+
+              <button class="auth-submit" type="submit" id="register-btn">
+                <span class="btn-text">CREATE ACCOUNT</span>
+                <span class="btn-spinner"><span class="spinner-ring"></span></span>
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- PASSWORD RESET PANEL -->
+        <div class="auth-panel" id="panel-reset" role="tabpanel">
+          <div class="auth-alert" id="reset-alert"></div>
+
+          <form id="reset-form" novalidate>
+            <div style="display:flex; flex-direction:column; gap:1.25rem;">
+              <p style="font-size:0.78rem; color:var(--text-muted); line-height:1.5;">
+                Enter your email address and we'll send you instructions to reset your password.
+              </p>
+
+              <div class="form-group">
+                <label class="form-label" for="reset-email">EMAIL ADDRESS</label>
+                <input
+                  class="form-input"
+                  id="reset-email"
+                  type="email"
+                  placeholder="you@example.com"
+                  autocomplete="email"
+                  required
+                >
+              </div>
+
+              <button class="auth-submit" type="submit" id="reset-btn">
+                <span class="btn-text">SEND RESET LINK</span>
+                <span class="btn-spinner"><span class="spinner-ring"></span></span>
+              </button>
+
+              <button type="button" class="auth-link" onclick="switchTab('login')">
+                ← Back to Sign In
+              </button>
+            </div>
+          </form>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="auth-footer">
+      Secured by <span style="color:var(--accent-cyan)">DartStream Auth</span> &amp; Firebase Identity Toolkit<br>
+      Your session is encrypted end-to-end.
+    </div>
+
+  </div>
+
+  <script src="auth.js"></script>
+</body>
+</html>

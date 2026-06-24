@@ -9,6 +9,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <!-- Auth guard: redirect to auth.html if not logged in -->
+  <script src="auth-guard.js"></script>
 </head>
 <body>
   <div class="game-wrapper">
@@ -31,6 +33,10 @@
         <div class="stat-badge">
           <span class="label">TIME ELAPSED</span>
           <span class="value text-indigo" id="timer-display">00:00</span>
+        </div>
+        <div class="user-chip">
+          <span class="user-email" id="user-email-display"></span>
+          <button class="btn" id="logout-btn" title="Sign Out">⎋ Sign Out</button>
         </div>
       </div>
     </header>
@@ -249,5 +255,25 @@
     </main>
   </div>
   <script src="app.js"></script>
+  <script>
+    // ─── Auth: Show user info & handle logout ───────────────────────────────
+    (function initAuthUI() {
+      const raw = sessionStorage.getItem('ds_session');
+      if (!raw) return;
+      try {
+        const session = JSON.parse(raw);
+        const emailEl = document.getElementById('user-email-display');
+        if (emailEl && session.email) emailEl.textContent = session.email;
+      } catch (e) { /* ignore */ }
+
+      document.getElementById('logout-btn').addEventListener('click', async () => {
+        try {
+          await fetch('/api/auth/logout', { method: 'POST' });
+        } catch (_) { /* best-effort */ }
+        sessionStorage.removeItem('ds_session');
+        window.location.replace('auth.html');
+      });
+    })();
+  </script>
 </body>
 </html>
