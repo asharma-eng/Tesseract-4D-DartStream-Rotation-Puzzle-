@@ -83,7 +83,7 @@ Middleware dsShelfBodyParserMiddleware() {
   };
 }
 
-DSShelfCore createServer({bool failFast = true}) {
+DSShelfCore createServer({bool failFast = false}) {
   final server = DSShelfCore();
 
   // Add standard middlewares
@@ -108,7 +108,7 @@ DSShelfCore createServer({bool failFast = true}) {
   }
 
   final saasClient = DartStreamClient(
-    config: DartStreamConfig.dev(firebaseApiKey: firebaseApiKey),
+    config: DartStreamConfig.dev(firebaseApiKey: firebaseApiKey ?? 'mock-firebase-api-key'),
   );
   print('📡 DartStream SaaS Client initialized (Dev Environment).');
 
@@ -403,6 +403,19 @@ DSShelfCore createServer({bool failFast = true}) {
       );
     }
 
+    if (saasSessionState == 'fallback') {
+      print('👤 [Fallback Mode] Mock registering user: $email');
+      return Response.ok(
+        jsonEncode({
+          'idToken': 'mock-id-token',
+          'userId': 'mock-user-${email.hashCode}',
+          'email': email,
+          'tenantId': 'mock-tenant',
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+
     try {
       // 1. Create Firebase account via DartStream auth client
       final firebaseSession = await saasClient.createEmailPasswordSession(
@@ -466,6 +479,19 @@ DSShelfCore createServer({bool failFast = true}) {
     if (email.isEmpty || password.isEmpty) {
       return Response.badRequest(
         body: jsonEncode({'error': 'email and password are required.'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+
+    if (saasSessionState == 'fallback') {
+      print('🔑 [Fallback Mode] Mock logging in user: $email');
+      return Response.ok(
+        jsonEncode({
+          'idToken': 'mock-id-token',
+          'userId': 'mock-user-${email.hashCode}',
+          'email': email,
+          'tenantId': 'mock-tenant',
+        }),
         headers: {'Content-Type': 'application/json'},
       );
     }
@@ -538,6 +564,14 @@ DSShelfCore createServer({bool failFast = true}) {
     if (email.isEmpty) {
       return Response.badRequest(
         body: jsonEncode({'error': 'email is required.'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+
+    if (saasSessionState == 'fallback') {
+      print('📧 [Fallback Mode] Mock password reset email sent to: $email');
+      return Response.ok(
+        jsonEncode({'status': 'ok', 'message': 'Password reset email sent (Mock).'}),
         headers: {'Content-Type': 'application/json'},
       );
     }
