@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:http/http.dart' as http;
 import 'package:ds_shelf/ds_shelf.dart' hide DSShelfCore;
 import 'package:dartstream_client/dartstream_client.dart';
 
@@ -83,7 +84,7 @@ Middleware dsShelfBodyParserMiddleware() {
   };
 }
 
-DSShelfCore createServer({bool failFast = false}) {
+DSShelfCore createServer({bool failFast = false, http.Client? httpClient, Map<String, String>? environment}) {
   final server = DSShelfCore();
 
   // Add standard middlewares
@@ -91,24 +92,29 @@ DSShelfCore createServer({bool failFast = false}) {
   server.addMiddleware(dsShelfBodyParserMiddleware());
 
   // Initialize DartStream SaaS client using credentials from environment
-  final email = Platform.environment['DARTSTREAM_EMAIL'];
-  final password = Platform.environment['DARTSTREAM_PASSWORD'];
-  final firebaseApiKey = Platform.environment['DARTSTREAM_FIREBASE_API_KEY'];
+  final env = environment ?? Platform.environment;
+  final email = env['DARTSTREAM_EMAIL'];
+  final password = env['DARTSTREAM_PASSWORD'];
+  final firebaseApiKey = env['DARTSTREAM_FIREBASE_API_KEY'];
+  final clientId = env['DARTSTREAM_CLIENT_ID'];
+  final clientSecret = env['DARTSTREAM_CLIENT_SECRET'];
+
+  final hasM2M = clientId != null && clientId.isNotEmpty && clientSecret != null && clientSecret.isNotEmpty;
+  final hasUser = email != null && email.isNotEmpty && password != null && password.isNotEmpty;
+  final hasCredentials = hasM2M || hasUser;
 
   if (failFast) {
-    if (email == null || email.isEmpty) {
-      throw StateError('DARTSTREAM_EMAIL environment variable is required.');
+    if (!hasCredentials) {
+      throw StateError('Either DARTSTREAM_CLIENT_ID/DARTSTREAM_CLIENT_SECRET or DARTSTREAM_EMAIL/DARTSTREAM_PASSWORD environment variables are required.');
     }
-    if (password == null || password.isEmpty) {
-      throw StateError('DARTSTREAM_PASSWORD environment variable is required.');
-    }
-    if (firebaseApiKey == null || firebaseApiKey.isEmpty) {
-      throw StateError('DARTSTREAM_FIREBASE_API_KEY environment variable is required.');
+    if (hasUser && (firebaseApiKey == null || firebaseApiKey.isEmpty)) {
+      throw StateError('DARTSTREAM_FIREBASE_API_KEY environment variable is required for email/password user session.');
     }
   }
 
   final saasClient = DartStreamClient(
     config: DartStreamConfig.dev(firebaseApiKey: firebaseApiKey ?? 'mock-firebase-api-key'),
+    httpClient: httpClient,
   );
   print('📡 DartStream SaaS Client initialized (Dev Environment).');
 
@@ -116,19 +122,69 @@ DSShelfCore createServer({bool failFast = false}) {
   DartStreamSession? saasSession;
   String saasSessionState = 'none';
 
+  Future<String> fetchM2MToken(String clientId, String clientSecret) async {
+    final client = httpClient ?? http.Client();
+    final body = {
+      'grant_type': 'client_credentials',
+      'client_id': clientId,
+      'client_secret': clientSecret,
+    };
+    final encodedBody = body.entries
+        .map((e) => '${Uri.encodeQueryComponent(e.key)}=${Uri.encodeQueryComponent(e.value)}')
+        .join('&');
+    
+    final tokenUri = saasClient.config.authBaseUrl.replace(path: '/oauth/token');
+    try {
+      final req = await client.post(
+        tokenUri,
+        headers: const {'content-type': 'application/x-www-form-urlencoded'},
+        body: encodedBody,
+      );
+      
+      if (req.statusCode >= 200 && req.statusCode < 300) {
+        final decoded = jsonDecode(req.body) as Map<String, dynamic>;
+        final token = decoded['access_token'] as String?;
+        if (token != null) {
+          return token;
+        }
+      }
+      throw DartStreamApiException(req.statusCode, req.body, uri: tokenUri);
+    } finally {
+      if (httpClient == null) {
+        client.close();
+      }
+    }
+  }
+
   Future<void> onboardSession() async {
     saasSessionState = 'initializing';
     try {
-      final firebaseSession = await saasClient.createEmailPasswordSession(
-        email: email!,
-        password: password!,
-      );
-      saasSession = await saasClient.onboardFirebaseSession(firebaseSession);
-      saasSessionState = 'live';
-      print('🔐 SaaS session onboarded successfully for user: ${saasSession?.userId}');
+      if (hasM2M) {
+        print('📡 Fetching M2M OAuth2 Token for Client ID: $clientId...');
+        final token = await fetchM2MToken(clientId, clientSecret);
+        saasSession = DartStreamSession(
+          idToken: token,
+          userId: clientId,
+          tenantId: 'm2m-tenant',
+          raw: {'access_token': token},
+        );
+        saasSessionState = 'live';
+        print('🔐 M2M SaaS session onboarded successfully using Client Credentials.');
+      } else if (hasUser) {
+        print('📡 Onboarding User Session for email...');
+        final firebaseSession = await saasClient.createEmailPasswordSession(
+          email: email,
+          password: password,
+        );
+        saasSession = await saasClient.onboardFirebaseSession(firebaseSession);
+        saasSessionState = 'live';
+        print('🔐 User SaaS session onboarded successfully for user: ${saasSession?.userId}');
+      } else {
+        throw StateError('No credentials configured for SaaS onboarding.');
+      }
     } catch (e) {
       print('Warning: Failed to onboard SaaS session: $e.');
-      if (failFast) {
+      if (failFast || hasCredentials) {
         throw StateError('Failed to onboard SaaS session: $e');
       }
       print('Using local fallback session.');
@@ -143,7 +199,7 @@ DSShelfCore createServer({bool failFast = false}) {
   }
 
   final sessionFuture = Future(() async {
-    if (!failFast && (email == null || password == null || firebaseApiKey == null)) {
+    if (!failFast && !hasCredentials) {
       saasSessionState = 'fallback';
       saasSession = DartStreamSession(
         idToken: 'fallback-token',
@@ -438,7 +494,7 @@ DSShelfCore createServer({bool failFast = false}) {
         );
       }
 
-      print('👤 New user registered via API: ${firebaseSession.email}');
+      print('👤 New user registered via API: ${firebaseSession.localId}');
       return Response.ok(
         jsonEncode({
           'idToken': dsSession.idToken,
@@ -518,7 +574,7 @@ DSShelfCore createServer({bool failFast = false}) {
         );
       }
 
-      print('🔑 User signed in via API: ${firebaseSession.email}');
+      print('🔑 User signed in via API: ${firebaseSession.localId}');
       return Response.ok(
         jsonEncode({
           'idToken': dsSession.idToken,
@@ -599,7 +655,7 @@ DSShelfCore createServer({bool failFast = false}) {
       httpClient.close();
 
       if (resp.statusCode >= 200 && resp.statusCode < 300) {
-        print('📧 Password reset email sent to: $email');
+        print('📧 Password reset email sent.');
         return Response.ok(
           jsonEncode({'status': 'ok', 'message': 'Password reset email sent.'}),
           headers: {'Content-Type': 'application/json'},
