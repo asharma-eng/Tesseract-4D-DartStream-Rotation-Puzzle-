@@ -33,9 +33,20 @@ class _DartstreamAppState extends State<DartstreamApp> {
     return MaterialApp(
       title: 'DartStream E2E',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF3DBEFF)),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF00F0FF),
+          brightness: Brightness.light,
+        ),
         useMaterial3: true,
       ),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF00F0FF),
+          brightness: Brightness.dark,
+        ),
+        useMaterial3: true,
+      ),
+      themeMode: ThemeMode.dark,
       home: _session.status == SessionStatus.signedIn
           ? ShellScreen(session: _session)
           : LoginScreen(session: _session),
