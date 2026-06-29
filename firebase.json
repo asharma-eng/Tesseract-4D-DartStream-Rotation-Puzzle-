@@ -1,17 +1,13 @@
 {
   "hosting": {
     "site": "sample-app-ashish-sharma",
-    "public": "projects/tesseract/web",
+    "public": "projects/tesseract/flutter_client/build/web",
     "ignore": [
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
     ],
     "rewrites": [
-      {
-        "source": "/auth",
-        "destination": "/auth.html"
-      },
       {
         "source": "**",
         "destination": "/index.html"

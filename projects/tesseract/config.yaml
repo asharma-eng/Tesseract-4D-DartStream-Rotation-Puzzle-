@@ -1,6 +1,0 @@
-vendor: local
-auth: firebase
-database: none
-cicd: none
-customTools:
-configuredAt: 2026-06-10T21:43:39.125246
