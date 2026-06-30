@@ -51,6 +51,43 @@ class Session extends ChangeNotifier {
         ),
       );
 
+  Future<void> signInWithProvider(
+    DartStreamAuthProvider provider,
+    String email, {
+    http.Client? httpClient,
+  }) =>
+      _authenticate(
+        () async {
+          // Use a deterministic password for simulated federated auth
+          final password =
+              'ProviderAuth_1298_${provider.pathSegment}_${email}_Tesseract';
+          DartStreamConnection connection;
+          try {
+            connection = await DartStreamClient.signIn(
+              config: AppConfig.dartStream,
+              email: email,
+              password: password,
+              httpClient: httpClient,
+            );
+          } catch (_) {
+            connection = await DartStreamClient.signUp(
+              config: AppConfig.dartStream,
+              email: email,
+              password: password,
+              httpClient: httpClient,
+            );
+          }
+          final providerSession = await connection.client.auth.onboardProviderIdToken(
+            provider: provider,
+            firebaseIdToken: connection.session.idToken,
+          );
+          return DartStreamConnection(
+            client: connection.client.withSession(providerSession),
+            session: providerSession,
+          );
+        },
+      );
+
   Future<void> _authenticate(
     Future<DartStreamConnection> Function() connect,
   ) async {

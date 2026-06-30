@@ -87,6 +87,8 @@ class DartstreamTetrisGame extends FlameGame
   bool _showSwordEffect = false;
   double _swordEffectTimer = 0.0;
 
+  final Map<String, bool> _pressedButtons = {};
+
   // Text renderers
   late TextPaint _textRenderer;
   late TextPaint _titleRenderer;
@@ -176,18 +178,19 @@ class DartstreamTetrisGame extends FlameGame
     _textRenderer = TextPaint(
       style: const TextStyle(
         color: Colors.white,
-        fontSize: 14,
+        fontSize: 13,
         fontWeight: FontWeight.w600,
-        fontFamily: 'Courier New',
+        fontFamily: 'sans-serif',
       ),
     );
 
     _titleRenderer = TextPaint(
       style: const TextStyle(
-        color: Color(0xFF3DBEFF),
-        fontSize: 16,
-        fontWeight: FontWeight.bold,
-        fontFamily: 'Courier New',
+        color: Color(0xFF00F0FF),
+        fontSize: 14,
+        fontWeight: FontWeight.w800,
+        fontFamily: 'sans-serif',
+        letterSpacing: 1.5,
       ),
     );
 
@@ -688,25 +691,35 @@ class DartstreamTetrisGame extends FlameGame
   }
 
   void _renderSidePanels(Canvas canvas) {
-    final panelBgPaint = Paint()..color = const Color(0xFF13192B);
+    final panelBgPaint = Paint()
+      ..color = const Color(0xFF0A0E17).withOpacity(0.75);
     final panelBorderPaint = Paint()
-      ..color = const Color(0xFF1E294B)
+      ..color = Colors.white.withOpacity(0.08)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
+      ..strokeWidth = 1.2;
 
     // LEFT PANEL: HOLD
     final holdPanelWidth = _boardLeft - 30;
     if (holdPanelWidth > 60) {
       final holdPanelRect = Rect.fromLTWH(15, _boardTop, holdPanelWidth, holdPanelWidth * 0.9);
-      canvas.drawRRect(RRect.fromRectAndRadius(holdPanelRect, const Radius.circular(8)), panelBgPaint);
-      canvas.drawRRect(RRect.fromRectAndRadius(holdPanelRect, const Radius.circular(8)), panelBorderPaint);
+      final holdRRect = RRect.fromRectAndRadius(holdPanelRect, const Radius.circular(12));
+
+      // Draw neon shadow/glow
+      final shadowPaint = Paint()
+        ..color = const Color(0xFFBD00FF).withOpacity(0.06)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.outer, 8)
+        ..style = PaintingStyle.fill;
+      canvas.drawRRect(holdRRect, shadowPaint);
+
+      canvas.drawRRect(holdRRect, panelBgPaint);
+      canvas.drawRRect(holdRRect, panelBorderPaint);
       
-      _titleRenderer.render(canvas, 'HOLD', Vector2(25, _boardTop + 8));
+      _titleRenderer.render(canvas, 'HOLD', Vector2(25, _boardTop + 10));
 
       if (heldPiece != null) {
         final previewCellSize = math.min(15.0, (holdPanelWidth - 20) / 4);
         final px = 15 + (holdPanelWidth - heldPiece![0].length * previewCellSize) / 2;
-        final py = _boardTop + 30 + (holdPanelWidth * 0.9 - 30 - heldPiece!.length * previewCellSize) / 2;
+        final py = _boardTop + 35 + (holdPanelWidth * 0.9 - 35 - heldPiece!.length * previewCellSize) / 2;
 
         for (int r = 0; r < heldPiece!.length; r++) {
           for (int c = 0; c < heldPiece![r].length; c++) {
@@ -723,14 +736,22 @@ class DartstreamTetrisGame extends FlameGame
     final rightPanelWidth = size.x - rightPanelX - 15;
     if (rightPanelWidth > 60) {
       final nextPanelRect = Rect.fromLTWH(rightPanelX, _boardTop, rightPanelWidth, rightPanelWidth * 0.9);
-      canvas.drawRRect(RRect.fromRectAndRadius(nextPanelRect, const Radius.circular(8)), panelBgPaint);
-      canvas.drawRRect(RRect.fromRectAndRadius(nextPanelRect, const Radius.circular(8)), panelBorderPaint);
+      final nextRRect = RRect.fromRectAndRadius(nextPanelRect, const Radius.circular(12));
+
+      final shadowPaint = Paint()
+        ..color = const Color(0xFF00F0FF).withOpacity(0.06)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.outer, 8)
+        ..style = PaintingStyle.fill;
+      canvas.drawRRect(nextRRect, shadowPaint);
+
+      canvas.drawRRect(nextRRect, panelBgPaint);
+      canvas.drawRRect(nextRRect, panelBorderPaint);
       
-      _titleRenderer.render(canvas, 'NEXT', Vector2(rightPanelX + 10, _boardTop + 8));
+      _titleRenderer.render(canvas, 'NEXT', Vector2(rightPanelX + 10, _boardTop + 10));
 
       final previewCellSize = math.min(15.0, (rightPanelWidth - 20) / 4);
       final px = rightPanelX + (rightPanelWidth - nextPiece[0].length * previewCellSize) / 2;
-      final py = _boardTop + 30 + (rightPanelWidth * 0.9 - 30 - nextPiece.length * previewCellSize) / 2;
+      final py = _boardTop + 35 + (rightPanelWidth * 0.9 - 35 - nextPiece.length * previewCellSize) / 2;
 
       for (int r = 0; r < nextPiece.length; r++) {
         for (int c = 0; c < nextPiece[r].length; c++) {
@@ -743,22 +764,38 @@ class DartstreamTetrisGame extends FlameGame
       // HUD Stats panel below NEXT
       final hudTop = _boardTop + rightPanelWidth * 0.9 + 15;
       final hudRect = Rect.fromLTWH(rightPanelX, hudTop, rightPanelWidth, size.y - hudTop - 20);
-      canvas.drawRRect(RRect.fromRectAndRadius(hudRect, const Radius.circular(8)), panelBgPaint);
-      canvas.drawRRect(RRect.fromRectAndRadius(hudRect, const Radius.circular(8)), panelBorderPaint);
+      final hudRRect = RRect.fromRectAndRadius(hudRect, const Radius.circular(12));
+
+      canvas.drawRRect(hudRRect, shadowPaint);
+      canvas.drawRRect(hudRRect, panelBgPaint);
+      canvas.drawRRect(hudRRect, panelBorderPaint);
 
       final double statsLeft = rightPanelX + 10;
-      _titleRenderer.render(canvas, 'STATS', Vector2(statsLeft, hudTop + 8));
+      _titleRenderer.render(canvas, 'STATS', Vector2(statsLeft, hudTop + 10));
+
+      void renderStat(String label, String value, Color valueColor, double x, double y) {
+        _textRenderer.render(canvas, label, Vector2(x, y));
+        final valRenderer = TextPaint(
+          style: TextStyle(
+            color: valueColor,
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'sans-serif',
+          ),
+        );
+        valRenderer.render(canvas, value, Vector2(x + (label.length * 7.5), y));
+      }
       
-      _textRenderer.render(canvas, 'Score: $score', Vector2(statsLeft, hudTop + 35));
-      _textRenderer.render(canvas, 'High: $highScore', Vector2(statsLeft, hudTop + 55));
-      _textRenderer.render(canvas, 'Level: $level', Vector2(statsLeft, hudTop + 75));
-      _textRenderer.render(canvas, 'Lines: $lifetimeCoins', Vector2(statsLeft, hudTop + 95));
+      renderStat('Score: ', '$score', const Color(0xFF00F0FF), statsLeft, hudTop + 35);
+      renderStat('High:  ', '$highScore', const Color(0xFFFFB800), statsLeft, hudTop + 55);
+      renderStat('Level: ', '$level', const Color(0xFFBD00FF), statsLeft, hudTop + 75);
+      renderStat('Lines: ', '$lifetimeCoins', const Color(0xFF00E676), statsLeft, hudTop + 95);
       
       final heartStr = '♥' * math.max(0, lives - 1);
-      _textRenderer.render(canvas, 'Lives: $heartStr ($lives)', Vector2(statsLeft, hudTop + 115));
+      renderStat('Lives: ', '$heartStr ($lives)', const Color(0xFFFF1744), statsLeft, hudTop + 115);
       
       if (swordCharges > 0) {
-        _textRenderer.render(canvas, 'Sword: ×$swordCharges', Vector2(statsLeft, hudTop + 135));
+        renderStat('Sword: ', '×$swordCharges', const Color(0xFFFFC857), statsLeft, hudTop + 135);
       }
     }
   }
@@ -784,76 +821,153 @@ class DartstreamTetrisGame extends FlameGame
     final hardDropButtonX = rightPanelCenterX + _cellSize * 1.3;
     final swordButtonX = rightPanelCenterX;
 
-    final btnPaint = Paint()
-      ..color = const Color(0x333DBEFF)
-      ..style = PaintingStyle.fill;
-    final btnBorderPaint = Paint()
-      ..color = const Color(0x883DBEFF)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
+    // Helper method to draw neon vector buttons
+    void drawBtn(double cx, double cy, String action, Color accentColor) {
+      final isPressed = _pressedButtons[action] == true;
+      final double scale = isPressed ? 0.88 : 1.0;
+      final double buttonRadius = r * scale;
 
-    void drawBtn(double cx, double cy, String text) {
-      canvas.drawCircle(Offset(cx, cy), r, btnPaint);
-      canvas.drawCircle(Offset(cx, cy), r, btnBorderPaint);
+      // Outer glow
+      final glowPaint = Paint()
+        ..color = accentColor.withOpacity(isPressed ? 0.35 : 0.15)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.outer, 6)
+        ..style = PaintingStyle.fill;
+      canvas.drawCircle(Offset(cx, cy), buttonRadius, glowPaint);
 
-      final textSpan = TextSpan(
-        style: TextStyle(
-          color: Colors.white.withOpacity(0.8),
-          fontSize: r * 0.9,
-          fontWeight: FontWeight.bold,
-        ),
-        text: text,
-      );
-      final textPainter = TextPainter(
-        text: textSpan,
-        textDirection: TextDirection.ltr,
-      )..layout();
-      textPainter.paint(
-        canvas,
-        Offset(cx - textPainter.width / 2, cy - textPainter.height / 2),
-      );
+      // Fill glassmorphic base
+      final fillPaint = Paint()
+        ..color = isPressed 
+            ? accentColor.withOpacity(0.35) 
+            : const Color(0xFF0F1524).withOpacity(0.65)
+        ..style = PaintingStyle.fill;
+      canvas.drawCircle(Offset(cx, cy), buttonRadius, fillPaint);
+
+      // Border outline
+      final borderPaint = Paint()
+        ..color = isPressed ? accentColor : accentColor.withOpacity(0.35)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = isPressed ? 2.0 : 1.2;
+      canvas.drawCircle(Offset(cx, cy), buttonRadius, borderPaint);
+
+      // Custom draw vector icons inside buttons
+      final iconPaint = Paint()
+        ..color = isPressed ? Colors.white : Colors.white.withOpacity(0.8)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.2
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round;
+
+      final double iconSize = buttonRadius * 0.9;
+
+      canvas.save();
+      canvas.translate(cx, cy);
+
+      if (action == 'left') {
+        final path = Path()
+          ..moveTo(iconSize * 0.2, -iconSize * 0.35)
+          ..lineTo(-iconSize * 0.2, 0)
+          ..lineTo(iconSize * 0.2, iconSize * 0.35);
+        canvas.drawPath(path, iconPaint);
+      } else if (action == 'right') {
+        final path = Path()
+          ..moveTo(-iconSize * 0.2, -iconSize * 0.35)
+          ..lineTo(iconSize * 0.2, 0)
+          ..lineTo(-iconSize * 0.2, iconSize * 0.35);
+        canvas.drawPath(path, iconPaint);
+      } else if (action == 'rotate') {
+        // Draw curved rotate arrow
+        iconPaint.style = PaintingStyle.stroke;
+        final rect = Rect.fromCircle(center: Offset.zero, radius: iconSize * 0.32);
+        canvas.drawArc(rect, -1.8, 4.8, false, iconPaint);
+        
+        // Arrow head
+        final fillArrow = Paint()
+          ..color = isPressed ? Colors.white : Colors.white.withOpacity(0.8)
+          ..style = PaintingStyle.fill;
+        final arrowPath = Path()
+          ..moveTo(iconSize * 0.22, -iconSize * 0.32)
+          ..lineTo(iconSize * 0.42, -iconSize * 0.08)
+          ..lineTo(iconSize * 0.02, -iconSize * 0.08)
+          ..close();
+        canvas.drawPath(arrowPath, fillArrow);
+      } else if (action == 'softDrop') {
+        // Double chevron down
+        final path = Path()
+          ..moveTo(-iconSize * 0.28, -iconSize * 0.2)
+          ..lineTo(0, iconSize * 0.1)
+          ..lineTo(iconSize * 0.28, -iconSize * 0.2)
+          ..moveTo(-iconSize * 0.28, 0.0)
+          ..lineTo(0, iconSize * 0.3)
+          ..lineTo(iconSize * 0.28, 0.0);
+        canvas.drawPath(path, iconPaint);
+      } else if (action == 'hardDrop') {
+        // Flat line + single down arrow
+        canvas.drawLine(
+          Offset(-iconSize * 0.32, iconSize * 0.3),
+          Offset(iconSize * 0.32, iconSize * 0.3),
+          iconPaint,
+        );
+        final path = Path()
+          ..moveTo(0, -iconSize * 0.3)
+          ..lineTo(0, iconSize * 0.1)
+          ..moveTo(-iconSize * 0.2, -iconSize * 0.1)
+          ..lineTo(0, iconSize * 0.12)
+          ..lineTo(iconSize * 0.2, -iconSize * 0.1);
+        canvas.drawPath(path, iconPaint);
+      } else if (action == 'sword') {
+        // Cross swords
+        final path = Path()
+          ..moveTo(-iconSize * 0.35, iconSize * 0.35)
+          ..lineTo(iconSize * 0.35, -iconSize * 0.35)
+          ..moveTo(-iconSize * 0.08, iconSize * 0.25)
+          ..lineTo(-iconSize * 0.25, iconSize * 0.08)
+          ..moveTo(-iconSize * 0.25, iconSize * 0.25)
+          ..lineTo(-iconSize * 0.08, iconSize * 0.08);
+        canvas.drawPath(path, iconPaint);
+      } else if (action == 'hold') {
+        // Curved exchange arrows
+        final path = Path()
+          ..moveTo(-iconSize * 0.25, -iconSize * 0.1)
+          ..quadraticBezierTo(0, -iconSize * 0.25, iconSize * 0.25, -iconSize * 0.1)
+          ..moveTo(iconSize * 0.25, iconSize * 0.1)
+          ..quadraticBezierTo(0, iconSize * 0.25, -iconSize * 0.25, iconSize * 0.1);
+        canvas.drawPath(path, iconPaint);
+        
+        final fillArrow = Paint()
+          ..color = isPressed ? Colors.white : Colors.white.withOpacity(0.8)
+          ..style = PaintingStyle.fill;
+        final arrow1 = Path()
+          ..moveTo(iconSize * 0.15, -iconSize * 0.22)
+          ..lineTo(iconSize * 0.3, -iconSize * 0.02)
+          ..lineTo(iconSize * 0.05, -iconSize * 0.02)
+          ..close();
+        final arrow2 = Path()
+          ..moveTo(-iconSize * 0.15, iconSize * 0.22)
+          ..lineTo(-iconSize * 0.3, iconSize * 0.02)
+          ..lineTo(-iconSize * 0.05, iconSize * 0.02)
+          ..close();
+        canvas.drawPath(arrow1, fillArrow);
+        canvas.drawPath(arrow2, fillArrow);
+      }
+
+      canvas.restore();
     }
 
-    // Left controls
-    drawBtn(leftButtonX, leftButtonsY, '◀');
-    drawBtn(rightButtonX, leftButtonsY, '▶');
-    drawBtn(rotateButtonX, rotateButtonY, '↻');
+    // Left controls (Cyan theme)
+    final leftColor = const Color(0xFF00F0FF);
+    drawBtn(leftButtonX, leftButtonsY, 'left', leftColor);
+    drawBtn(rightButtonX, leftButtonsY, 'right', leftColor);
+    drawBtn(rotateButtonX, rotateButtonY, 'rotate', leftColor);
 
-    // Right controls
-    drawBtn(softDropButtonX, rightButtonsY, '▼');
-    drawBtn(hardDropButtonX, rightButtonsY, '⤓');
+    // Right controls (Purple theme for standard, Gold for sword)
+    final rightColor = const Color(0xFFBD00FF);
+    drawBtn(softDropButtonX, rightButtonsY, 'softDrop', rightColor);
+    drawBtn(hardDropButtonX, rightButtonsY, 'hardDrop', rightColor);
 
     if (swordCharges > 0) {
-      final swordBtnPaint = Paint()
-        ..color = const Color(0x33FFC857)
-        ..style = PaintingStyle.fill;
-      final swordBtnBorderPaint = Paint()
-        ..color = const Color(0x88FFC857)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5;
-
-      canvas.drawCircle(Offset(swordButtonX, swordButtonY), r, swordBtnPaint);
-      canvas.drawCircle(Offset(swordButtonX, swordButtonY), r, swordBtnBorderPaint);
-
-      final textSpan = TextSpan(
-        style: TextStyle(
-          color: const Color(0xFFFFC857),
-          fontSize: r * 0.9,
-          fontWeight: FontWeight.bold,
-        ),
-        text: '⚔',
-      );
-      final textPainter = TextPainter(
-        text: textSpan,
-        textDirection: TextDirection.ltr,
-      )..layout();
-      textPainter.paint(
-        canvas,
-        Offset(swordButtonX - textPainter.width / 2, swordButtonY - textPainter.height / 2),
-      );
+      drawBtn(swordButtonX, swordButtonY, 'sword', const Color(0xFFFFB800));
     } else {
-      // Draw Hold button instead on bottom right if sword empty
-      drawBtn(swordButtonX, swordButtonY, '⟳');
+      drawBtn(swordButtonX, swordButtonY, 'hold', rightColor);
     }
   }
 
@@ -868,7 +982,7 @@ class DartstreamTetrisGame extends FlameGame
           color: Colors.white,
           fontSize: 24,
           fontWeight: FontWeight.w800,
-          fontFamily: 'Courier New',
+          fontFamily: 'sans-serif',
         ),
       );
 
@@ -905,7 +1019,7 @@ class DartstreamTetrisGame extends FlameGame
           color: Colors.black,
           fontSize: 20,
           fontWeight: FontWeight.w900,
-          fontFamily: 'Courier New',
+          fontFamily: 'sans-serif',
         ),
       );
       bannerTextRenderer.render(
@@ -982,23 +1096,45 @@ class DartstreamTetrisGame extends FlameGame
       return dx * dx + dy * dy <= r * r;
     }
 
+    String? tappedAction;
     if (checkBtn(leftButtonX, leftButtonsY)) {
+      tappedAction = 'left';
       _moveLeft();
     } else if (checkBtn(rightButtonX, leftButtonsY)) {
+      tappedAction = 'right';
       _moveRight();
     } else if (checkBtn(rotateButtonX, rotateButtonY)) {
+      tappedAction = 'rotate';
       _rotatePiece();
     } else if (checkBtn(softDropButtonX, rightButtonsY)) {
+      tappedAction = 'softDrop';
       _softDrop();
     } else if (checkBtn(hardDropButtonX, rightButtonsY)) {
+      tappedAction = 'hardDrop';
       _hardDrop();
     } else if (checkBtn(swordButtonX, swordButtonY)) {
       if (swordCharges > 0) {
+        tappedAction = 'sword';
         _useSword();
       } else {
+        tappedAction = 'hold';
         _holdPiece();
       }
     }
+
+    if (tappedAction != null) {
+      _pressedButtons[tappedAction] = true;
+    }
+  }
+
+  @override
+  void onTapUp(TapUpEvent event) {
+    _pressedButtons.clear();
+  }
+
+  @override
+  void onTapCancel(TapCancelEvent event) {
+    _pressedButtons.clear();
   }
 
   @override

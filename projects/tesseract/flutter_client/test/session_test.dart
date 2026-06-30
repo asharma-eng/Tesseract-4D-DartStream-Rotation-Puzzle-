@@ -226,5 +226,64 @@ void main() {
       expect(session.errorMessage, contains('HTTP 401: Unauthorized Project Config'));
       expect(session.connection, isNull);
     });
+
+    test('Successful signInWithProvider flow (Google)', () async {
+      final session = Session();
+      final mockClient = MockClient((request) async {
+        // 1. Firebase Auth Signin/Signup request
+        if (request.url.toString().contains('accounts:signInWithPassword')) {
+          return http.Response(
+            jsonEncode({
+              'idToken': 'mock-id-token',
+              'refreshToken': 'mock-refresh-token',
+              'email': 'alex.dev@gmail.com',
+              'localId': 'mock-local-id',
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+
+        // 2. Onboard Firebase Token
+        if (request.url.path == '/api/v1/auth/signup') {
+          return http.Response(
+            jsonEncode({
+              'user': {
+                'id': 'ds-user-123',
+                'active_tenant_id': 'ds-tenant-456',
+              }
+            }),
+            201,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+
+        // 3. Onboard Provider (Google) Token
+        if (request.url.path == '/api/v1/auth/signin/google') {
+          return http.Response(
+            jsonEncode({
+              'user': {
+                'id': 'ds-user-123',
+                'active_tenant_id': 'ds-tenant-456-google',
+              }
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+
+        return http.Response('Not Found', 404);
+      });
+
+      await session.signInWithProvider(
+        DartStreamAuthProvider.google,
+        'alex.dev@gmail.com',
+        httpClient: mockClient,
+      );
+
+      expect(session.status, equals(SessionStatus.signedIn));
+      expect(session.userId, equals('ds-user-123'));
+      expect(session.tenantId, equals('ds-tenant-456-google'));
+    });
   });
 }
