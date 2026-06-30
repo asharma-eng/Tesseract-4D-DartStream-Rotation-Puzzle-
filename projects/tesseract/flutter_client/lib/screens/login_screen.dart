@@ -176,11 +176,7 @@ class _LoginScreenState extends State<LoginScreen> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF060913),
-              Color(0xFF0F1524),
-              Color(0xFF1B1429),
-            ],
+            colors: [Color(0xFF060913), Color(0xFF0F1524), Color(0xFF1B1429)],
             stops: [0.0, 0.5, 1.0],
           ),
         ),
@@ -293,7 +289,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
                                   Text(
-                                    _isSignUp ? 'INITIALIZE USER SESSION' : 'RESUME USER SESSION',
+                                    _isSignUp
+                                        ? 'INITIALIZE USER SESSION'
+                                        : 'RESUME USER SESSION',
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 13,
@@ -318,7 +316,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                     const SizedBox(height: 20),
                                     const _CyberBanner(
                                       isError: true,
-                                      text: 'No Firebase API key detected. Please run the client with:\n--dart-define=FIREBASE_API_KEY=<key>',
+                                      text:
+                                          'No Firebase API key detected. Please run the client with:\n--dart-define=FIREBASE_API_KEY=<key>',
                                     ),
                                   ],
                                   const SizedBox(height: 28),
@@ -335,7 +334,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                     controller: _email,
                                     keyboardType: TextInputType.emailAddress,
                                     autofillHints: const [AutofillHints.email],
-                                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                    ),
                                     decoration: _customInputDecoration(
                                       labelText: 'Security Email',
                                       hintText: 'user@aortem.com',
@@ -348,7 +350,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                   // Password Field
                                   TextField(
                                     controller: _password,
-                                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                    ),
                                     obscureText: _obscurePassword,
                                     decoration: _customInputDecoration(
                                       labelText: 'Access Password',
@@ -364,14 +369,16 @@ class _LoginScreenState extends State<LoginScreen> {
                                         ),
                                         onPressed: () {
                                           setState(() {
-                                            _obscurePassword = !_obscurePassword;
+                                            _obscurePassword =
+                                                !_obscurePassword;
                                           });
                                         },
                                       ),
                                       helperText: 'At least 6 characters',
                                     ),
                                     enabled: !busy,
-                                    onSubmitted: (_) => _isSignUp ? null : _submit(),
+                                    onSubmitted: (_) =>
+                                        _isSignUp ? null : _submit(),
                                   ),
 
                                   if (_isSignUp) ...[
@@ -379,12 +386,16 @@ class _LoginScreenState extends State<LoginScreen> {
                                     // Confirm Password Field
                                     TextField(
                                       controller: _confirm,
-                                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 14,
+                                      ),
                                       obscureText: _obscureConfirm,
                                       decoration: _customInputDecoration(
                                         labelText: 'Confirm Password',
                                         hintText: '••••••••',
-                                        prefixIcon: Icons.verified_user_outlined,
+                                        prefixIcon:
+                                            Icons.verified_user_outlined,
                                         suffixIcon: IconButton(
                                           icon: Icon(
                                             _obscureConfirm
@@ -395,7 +406,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                           ),
                                           onPressed: () {
                                             setState(() {
-                                              _obscureConfirm = !_obscureConfirm;
+                                              _obscureConfirm =
+                                                  !_obscureConfirm;
                                             });
                                           },
                                         ),
@@ -409,16 +421,15 @@ class _LoginScreenState extends State<LoginScreen> {
                                   // Action Button
                                   _buildActionButton(
                                     onPressed: busy || !hasKey ? null : _submit,
-                                    text: _isSignUp ? 'PROVISION SESSION' : 'ESTABLISH SESSION',
+                                    text: _isSignUp
+                                        ? 'PROVISION SESSION'
+                                        : 'ESTABLISH SESSION',
                                     busy: busy,
                                   ),
 
                                   if (error != null) ...[
                                     const SizedBox(height: 20),
-                                    _CyberBanner(
-                                      isError: true,
-                                      text: error,
-                                    ),
+                                    _CyberBanner(isError: true, text: error),
                                   ],
                                 ],
                               ),
@@ -439,10 +450,7 @@ class _LoginScreenState extends State<LoginScreen> {
 }
 
 class _ModeTabSelector extends StatelessWidget {
-  const _ModeTabSelector({
-    required this.currentMode,
-    required this.onChanged,
-  });
+  const _ModeTabSelector({required this.currentMode, required this.onChanged});
 
   final AuthMode currentMode;
   final ValueChanged<AuthMode> onChanged;
@@ -533,17 +541,16 @@ class _ModeTabSelector extends StatelessWidget {
 }
 
 class _CyberBanner extends StatelessWidget {
-  const _CyberBanner({
-    required this.isError,
-    required this.text,
-  });
+  const _CyberBanner({required this.isError, required this.text});
 
   final bool isError;
   final String text;
 
   @override
   Widget build(BuildContext context) {
-    final accentColor = isError ? const Color(0xFFFF0055) : const Color(0xFFFFB800);
+    final accentColor = isError
+        ? const Color(0xFFFF0055)
+        : const Color(0xFFFFB800);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

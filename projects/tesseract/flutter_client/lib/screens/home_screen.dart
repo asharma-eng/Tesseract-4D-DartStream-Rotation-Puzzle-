@@ -4,7 +4,7 @@ import 'package:dartstream_client/dartstream_client.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
-import '../game/dartstream_dash.dart';
+import '../game/dartstream_tetris.dart';
 import '../state/session.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -19,7 +19,7 @@ enum _SaveStatus { idle, saving, saved, error }
 
 class _HomeScreenState extends State<HomeScreen> {
   static const _slotKey = 'flame';
-  // DartStream Dash runs in its own experience scope — deliberately distinct
+  // DartStream Tetris runs in its own experience scope — deliberately distinct
   // from the SaaS gaming samples (flame-game/production) so this client's
   // profile, inventory and cloud-saves are isolated and we verify the
   // project+environment scoping independently rather than mirroring them.
@@ -30,7 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
     environmentId: _environmentId,
   );
 
-  late DartstreamDashGame _game;
+  late DartstreamTetrisGame _game;
   bool _loading = true;
   Object? _bootstrapError;
 
@@ -83,7 +83,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final config = _buildConfig(flagsList, items, payload, profile);
       _resumeSummary = 'high ${config.resumeHighScore} · '
           'coins ${config.resumeLifetimeCoins}';
-      _game = DartstreamDashGame(
+      _game = DartstreamTetrisGame(
         config: config,
         onSnapshot: _onSnapshot,
         onEvent: _onEvent,
@@ -105,7 +105,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// Maps live feature flags + inventory + a cloud-save snapshot into the
   /// gameplay config — this is where DartStream services drive the game.
-  DashConfig _buildConfig(
+  TetrisConfig _buildConfig(
     List<dynamic> flags,
     List<dynamic> inventory,
     Map payload,
@@ -131,7 +131,7 @@ class _HomeScreenState extends State<HomeScreen> {
         (p['displayName'] ?? p['display_name'] ?? 'Player').toString();
     int asInt(Object? v) => v is int ? v : 0;
 
-    return DashConfig(
+    return TetrisConfig(
       startLives: enabled.contains('extra_life') ? 4 : 3,
       doubleScore: enabled.contains('double_score'),
       hardMode: enabled.contains('hard_mode'),
@@ -168,7 +168,7 @@ class _HomeScreenState extends State<HomeScreen> {
       await _client.reactive.logEvent(
         _ds,
         eventType: type,
-        payload: {...payload, 'source': 'dartstream-dash'},
+        payload: {...payload, 'source': 'dartstream-tetris'},
       );
     } catch (e) {
       _setLastEvent('$type (log error: $e)');
@@ -257,13 +257,12 @@ class _HomeScreenState extends State<HomeScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _panel(
-          title: 'DartStream Dash — how to play',
+          title: 'DartStream Tetris — how to play',
           child: const Text(
-            'Drag (or ←/→) to move, catch coins, dodge bombs. '
-            'Tap or Space uses the sword (from inventory) to clear bombs.\n\n'
-            'DartStream drives the rules: feature flags double_score / hard_mode '
-            '/ extra_life change gameplay; inventory grants the sword; cloud-save '
-            'persists & resumes your high score; every beat logs a reactive event.',
+            'Keyboard: Left/Right or A/D to move, Up/W to rotate, Down/S to soft drop, Space/Enter to hard drop, C/Shift to hold piece.\n\n'
+            'Touch: Click the on-screen buttons on the left/right of the board.\n\n'
+            'Sword: Press E/F or click the ⚔ button to use a sword charge (from inventory) to clear the bottom 3 lines.\n\n'
+            'DartStream drives the rules: feature flags double_score / hard_mode / extra_life change gameplay; inventory grants the sword; cloud-save persists & resumes your high score; every beat logs a reactive event.',
           ),
         ),
         _panel(

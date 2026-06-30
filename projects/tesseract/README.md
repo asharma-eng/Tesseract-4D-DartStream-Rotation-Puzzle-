@@ -155,7 +155,7 @@ SaaS **dev** hosts (`DartStreamConfig.dev()` /
 │       │   ├── login_screen.dart    # Create Account / Sign In toggle
 │       │   └── home_screen.dart     # live service panels + game host
 │       └── (auth + per-service clients come from the `dartstream_client` package)
-│       └── game/dartstream_dash.dart # Flame arcade game (flags/inventory/cloud-save driven)
+│       └── game/dartstream_tetris.dart # Flame arcade game (flags/inventory/cloud-save driven)
 └── README.md
 ```
 
@@ -409,12 +409,11 @@ and the CRUD screens share one reusable widget
 > calls pass `userId`/`tenantId` as query params. The `dartstream_client` SDK
 > handles this for you (it derives them from the `DartStreamSession`).
 
-### DartStream Dash (the Overview game)
+### DartStream Tetris (the Overview game)
 
-A small Flame arcade game ([`game/dartstream_dash.dart`](flutter_client/lib/game/dartstream_dash.dart))
+A small Flame arcade game ([`game/dartstream_tetris.dart`](flutter_client/lib/game/dartstream_tetris.dart))
 that exists to prove the experience/platform services drive real behaviour, not
-just panels. **Controls:** drag (or `←`/`→`) to move the ship, catch coins,
-dodge bombs; **tap or `Space`** uses the sword; on game over, tap / `R` to
+just panels. **Controls:** Arrow keys or on-screen buttons to rotate/move/drop, Space/Enter to hard drop, C/Shift to hold; on game over, tap / `R` to
 replay. Each service maps to a mechanic:
 
 | DartStream service | In-game effect |
