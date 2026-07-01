@@ -14,8 +14,18 @@ class AppConfig {
     defaultValue: 'AIzaSyC5ImF7HStDsFZwIEcpvBzqblnPolBZHxk',
   );
 
+  static const intelliToggleClientId = String.fromEnvironment('INTELLITOGGLE_CLIENT_ID', defaultValue: '');
+  static const intelliToggleClientSecret = String.fromEnvironment('INTELLITOGGLE_CLIENT_SECRET', defaultValue: '');
+  static const intelliToggleTenantId = String.fromEnvironment('INTELLITOGGLE_TENANT_ID', defaultValue: '');
+
   /// Whether a key was actually injected; the login flow surfaces this.
   static bool get hasFirebaseApiKey => firebaseApiKey.isNotEmpty;
+
+  /// Check if we have credentials to initialize IntelliToggle feature flags.
+  static bool get hasIntelliToggleCredentials =>
+      intelliToggleClientId.isNotEmpty &&
+      intelliToggleClientSecret.isNotEmpty &&
+      intelliToggleTenantId.isNotEmpty;
 
   /// The DartStream SaaS dev environment, wired with our Firebase web key.
   /// Swap `.dev()` for `.prod()` to point at production.

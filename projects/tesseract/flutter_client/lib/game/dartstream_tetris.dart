@@ -20,6 +20,7 @@ class TetrisConfig {
     this.resumeHighScore = 0,
     this.resumeLifetimeCoins = 0,
     this.playerName = 'Player',
+    this.isIntelliToggleUsed = false,
   });
 
   final int startLives;
@@ -29,6 +30,7 @@ class TetrisConfig {
   final int resumeHighScore;
   final int resumeLifetimeCoins;
   final String playerName;
+  final bool isIntelliToggleUsed;
 }
 
 /// "DartStream Tetris" — classic block stacking game. Every gameplay
@@ -796,6 +798,10 @@ class DartstreamTetrisGame extends FlameGame
       
       if (swordCharges > 0) {
         renderStat('Sword: ', '×$swordCharges', const Color(0xFFFFC857), statsLeft, hudTop + 135);
+      }
+
+      if (config.isIntelliToggleUsed) {
+        renderStat('Flags: ', 'IntelliToggle ⚡', const Color(0xFF00E5FF), statsLeft, hudTop + (swordCharges > 0 ? 155 : 135));
       }
     }
   }

@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:dartstream_client/dartstream_client.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
+import 'package:openfeature_provider_intellitoggle/openfeature_provider_intellitoggle.dart';
 
+import '../config.dart';
 import '../game/dartstream_tetris.dart';
 import '../state/session.dart';
 
@@ -80,7 +82,67 @@ class _HomeScreenState extends State<HomeScreen> {
               (snapshot!['snapshot'] as Map)['payload'] is Map)
           ? (snapshot['snapshot'] as Map)['payload'] as Map
           : const {};
-      final config = _buildConfig(flagsList, items, payload, profile);
+
+      // Initialize and evaluate IntelliToggle flags if credentials are present
+      bool intelliToggleInitialized = false;
+      final Map<String, bool> intelliToggleFlags = {};
+      if (AppConfig.hasIntelliToggleCredentials) {
+        try {
+          debugPrint('🚀 Bootstrapping IntelliToggle provider...');
+          final provider = IntelliToggleProvider(
+            clientId: AppConfig.intelliToggleClientId,
+            clientSecret: AppConfig.intelliToggleClientSecret,
+            tenantId: AppConfig.intelliToggleTenantId,
+          );
+          await provider.initialize();
+          
+          final api = OpenFeatureAPI();
+          api.setProvider(provider);
+          
+          final featureClient = api.getClient('tesseract-game');
+          final client = IntelliToggleClient(featureClient);
+          
+          final userIdStr = widget.session.userId ?? 'anonymous-user';
+          final context = {
+            'targetingKey': userIdStr,
+            'email': widget.session.email ?? '',
+          };
+          
+          intelliToggleFlags['double-score'] = await client.getBooleanValue(
+            'double-score',
+            false,
+            targetingKey: userIdStr,
+            evaluationContext: context,
+          );
+          intelliToggleFlags['hard-mode'] = await client.getBooleanValue(
+            'hard-mode',
+            false,
+            targetingKey: userIdStr,
+            evaluationContext: context,
+          );
+          intelliToggleFlags['extra-life'] = await client.getBooleanValue(
+            'extra-life',
+            false,
+            targetingKey: userIdStr,
+            evaluationContext: context,
+          );
+          intelliToggleInitialized = true;
+          debugPrint('✓ IntelliToggle initialized and flags evaluated: $intelliToggleFlags');
+        } catch (e) {
+          debugPrint('⚠️ Failed to initialize/evaluate IntelliToggle: $e');
+        }
+      } else {
+        debugPrint('ℹ️ IntelliToggle credentials are empty. Skipping IntelliToggle initialization.');
+      }
+
+      final config = _buildConfig(
+        flagsList,
+        items,
+        payload,
+        profile,
+        intelliToggleInitialized: intelliToggleInitialized,
+        intelliToggleFlags: intelliToggleFlags,
+      );
       _resumeSummary = 'high ${config.resumeHighScore} · '
           'coins ${config.resumeLifetimeCoins}';
       _game = DartstreamTetrisGame(
@@ -109,8 +171,10 @@ class _HomeScreenState extends State<HomeScreen> {
     List<dynamic> flags,
     List<dynamic> inventory,
     Map payload,
-    Map<String, dynamic> profile,
-  ) {
+    Map<String, dynamic> profile, {
+    bool intelliToggleInitialized = false,
+    Map<String, bool> intelliToggleFlags = const {},
+  }) {
     final enabled = <String>{};
     for (final f in flags) {
       if (f is Map && (f['enabled'] == true || f['status'] == 'active')) {
@@ -131,14 +195,27 @@ class _HomeScreenState extends State<HomeScreen> {
         (p['displayName'] ?? p['display_name'] ?? 'Player').toString();
     int asInt(Object? v) => v is int ? v : 0;
 
+    final extraLifeEnabled = intelliToggleInitialized
+        ? (intelliToggleFlags['extra-life'] == true)
+        : enabled.contains('extra_life');
+
+    final doubleScoreEnabled = intelliToggleInitialized
+        ? (intelliToggleFlags['double-score'] == true)
+        : enabled.contains('double_score');
+
+    final hardModeEnabled = intelliToggleInitialized
+        ? (intelliToggleFlags['hard-mode'] == true)
+        : enabled.contains('hard_mode');
+
     return TetrisConfig(
-      startLives: enabled.contains('extra_life') ? 4 : 3,
-      doubleScore: enabled.contains('double_score'),
-      hardMode: enabled.contains('hard_mode'),
+      startLives: extraLifeEnabled ? 4 : 3,
+      doubleScore: doubleScoreEnabled,
+      hardMode: hardModeEnabled,
       swordCharges: swordCharges,
       resumeHighScore: asInt(payload['highScore']),
       resumeLifetimeCoins: asInt(payload['lifetimeCoins']),
       playerName: name,
+      isIntelliToggleUsed: intelliToggleInitialized,
     );
   }
 

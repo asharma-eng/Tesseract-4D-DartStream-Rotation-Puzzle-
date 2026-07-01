@@ -34,6 +34,8 @@ dependencies:
   cupertino_icons: ^1.0.8
   flame: ^1.21.0
   dartstream_client: ^0.0.1
+  openfeature_provider_intellitoggle: ^0.0.9
+  openfeature_dart_server_sdk: ^0.0.22
 
 dev_dependencies:
   flutter_test:
